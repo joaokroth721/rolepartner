@@ -11,10 +11,11 @@ The whole app is one page (`app/page.js`) rendering state-driven screens. We ref
 1. **home** / **main** — scenario catalog: featured hero + filterable list (`tab=practice`, no scenario open)
 2. **intro** — scenario briefing: goal, tasks, vocab, phrases (`scenario` open, `stage=intro`)
 3. **conversation** — live voice chat with the AI partner (`scenario` open, `stage=chat`)
-4. **evaluation** — score, corrections, tips after a conversation (`stage=feedback`)
-5. **feedback** — nav label "Review": favorited corrections only, no history logs (`tab=feedback`, no scenario open)
-6. **texts** — reading catalog: featured hero + list of reading texts (`tab=texts`, no text open)
-7. **reading** — a single reading text open in the reader (`openText` set)
+4. **leaderboard** — score of the conversation that just ended + global Top 10 (`stage=leaderboard`)
+5. **evaluation** — score, corrections, tips after a conversation (`stage=feedback`)
+6. **feedback** — nav label "Review": favorited corrections only, no history logs (`tab=feedback`, no scenario open)
+7. **texts** — reading catalog: featured hero + list of reading texts (`tab=texts`, no text open)
+8. **reading** — a single reading text open in the reader (`openText` set)
 
 ## Process to create new challenges / texts
 

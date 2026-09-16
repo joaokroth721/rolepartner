@@ -1,6 +1,7 @@
 import { generateObject, jsonSchema } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { byId } from "../../scenarios";
+import { TAGS } from "../../tags";
 
 const evalSchema = jsonSchema({
   type: "object",
@@ -28,7 +29,7 @@ const evalSchema = jsonSchema({
           note: { type: "string", description: "Short explanation, in English" },
           tag: {
             type: "string",
-            enum: ["Genus/Artikel", "Verbzeit", "Wortstellung", "Falscher Freund", "Wortwahl", "Präposition", "Sonstiges"],
+            enum: TAGS,
             description: "Error category (closest match)",
           },
         },

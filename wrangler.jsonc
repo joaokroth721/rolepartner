@@ -10,5 +10,16 @@
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
-  }
+  },
+  // Favorites, conversation transcripts and the leaderboard. Create the database once with
+  //   npx wrangler d1 create rolepartner
+  // and paste the id it prints into "database_id" below, then apply the schema:
+  //   npx wrangler d1 migrations apply rolepartner --remote
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "rolepartner",
+      "database_id": "PASTE_D1_DATABASE_ID_HERE"
+    }
+  ]
 }

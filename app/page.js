@@ -5,29 +5,11 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import { scenarios } from "./scenarios";
 import { texts } from "./texts";
 import { splitSentences, tokenize, isWord, glossKey } from "./tokenize.mjs";
+import { favKey, MASTER_AT } from "./favkey";
 
-// ponytail: feedbacks e favoritos ficam no localStorage. Trocar por DB/conta quando precisar sincronizar entre dispositivos.
-const loadJSON = (key) => {
-  try {
-    return JSON.parse(localStorage.getItem(key) || "[]");
-  } catch {
-    return [];
-  }
-};
-const loadFeedbacks = () => loadJSON("feedbacks");
-
-// Type-aware key so favorites can hold corrections, vocab, phrases and partner messages.
-// (no type = legacy correction favorite saved before this existed.)
-const favKey = (f) =>
-  f.type === "correction" || !f.type
-    ? `c|${f.wrong}→${f.right}`
-    : f.type === "vocab"
-    ? `v|${f.de}`
-    : f.type === "phrase"
-    ? `p|${f.de}`
-    : f.type === "keyword"
-    ? `k|${f.de}`
-    : `m|${f.text}`;
+// Favorites, transcripts and scores live in D1 (see app/api/favorites, /sessions, /leaderboard).
+// favKey is imported rather than defined here so the client and the server always agree on
+// what counts as the same item.
 
 // Botão de login/logout Google. Anônimo por padrão; ao logar mostra avatar + sair.
 function AuthButton() {
@@ -47,29 +29,15 @@ function AuthButton() {
   );
 }
 
-const MASTER_AT = 3; // "Got it" clicks before a card counts as mastered
 const TYPE_LABEL = { vocab: "Vokabeln", phrase: "Sätze", message: "Nachrichten", keyword: "Texte" };
 const favChip = (f) => (f.type && f.type !== "correction" ? TYPE_LABEL[f.type] : f.tag || "Sonstiges");
+const favDate = (f) => (f.createdAt ? new Date(f.createdAt).toLocaleString("pt-BR") : "");
 
 // "Learn more" groups favorites into sections by type (legacy no-type = correction).
 const GROUP_ORDER = ["correction", "vocab", "phrase", "keyword", "message"];
 const GROUP_LABEL = { correction: "Korrekturen", ...TYPE_LABEL };
 const groupOf = (f) => (f.type && f.type !== "correction" ? f.type : "correction");
 
-// ponytail: dados de demonstração pra visualizar a tela "Learn more" sem jogar uma conversa.
-// Só semeia quando localStorage está vazio. Apagar DEMO_SEED (e o seed no useEffect) quando o backend chegar.
-const DEMO_SEED = true;
-const SEED_FAVORITES = [
-  { type: "correction", wrong: "Hier ist mein Karte", right: "Hier ist meine Karte", note: '"Karte" is feminine, so it takes "meine".', tag: "Genus/Artikel", scenario: "Fahrkarte kaufen", date: "10/09/2026 14:32", reviews: 0 },
-  { type: "correction", wrong: "der Fahrkarte", right: "die Fahrkarte", note: '"Fahrkarte" is feminine: die Fahrkarte.', tag: "Genus/Artikel", scenario: "Fahrkarte kaufen", date: "10/09/2026 14:33", reviews: 1 },
-  { type: "correction", wrong: "Ich habe nach München gegangen", right: "Ich bin nach München gefahren", note: 'Movement verbs take "sein"; use "fahren" for a train.', tag: "Verbzeit", scenario: "Fahrkarte kaufen", date: "08/09/2026 19:10", reviews: 0 },
-  { type: "correction", wrong: "Ich weiß nicht wo ist der Bahnhof", right: "Ich weiß nicht, wo der Bahnhof ist", note: "In a subordinate clause the verb goes to the end.", tag: "Wortstellung", scenario: "Nach dem Weg fragen", date: "05/09/2026 11:02", reviews: 0 },
-  { type: "correction", wrong: "das Preis ist hoch", right: "der Preis ist hoch", note: '"Preis" is masculine: der Preis.', tag: "Genus/Artikel", scenario: "Fahrkarte kaufen", date: "01/09/2026 09:20", reviews: 3 },
-  { type: "vocab", de: "die Fahrkarte", en: "the ticket", scenario: "Fahrkarte kaufen", date: "10/09/2026 14:30", reviews: 0 },
-  { type: "vocab", de: "hin und zurück", en: "round trip", scenario: "Fahrkarte kaufen", date: "10/09/2026 14:30", reviews: 2 },
-  { type: "phrase", de: "Wann fährt der nächste Zug?", en: "When does the next train leave?", scenario: "Fahrkarte kaufen", date: "10/09/2026 14:31", reviews: 0 },
-  { type: "message", text: "Gerne. Einfach oder hin und zurück?", scenario: "Fahrkarte kaufen", date: "10/09/2026 14:31", reviews: 0 },
-];
 // Posta JSON e devolve o corpo parseado, ou lança uma mensagem limpa (mesmo se a resposta não for JSON).
 async function postJSON(url, body) {
   const res = await fetch(url, {
@@ -77,6 +45,20 @@ async function postJSON(url, body) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Server ${res.status}`);
+  return data;
+}
+
+async function getJSON(url) {
+  const res = await fetch(url);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Server ${res.status}`);
+  return data;
+}
+
+async function delJSON(url) {
+  const res = await fetch(url, { method: "DELETE" });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `Server ${res.status}`);
   return data;
@@ -92,16 +74,6 @@ const MEDAL_TIERS = [
 ];
 const medalFor = (score) => MEDAL_TIERS.find((t) => score >= t.min) || null;
 const nextTier = (score) => [...MEDAL_TIERS].reverse().find((t) => score < t.min) || null;
-
-// Personal leaderboard for one scenario: this player's past attempts, best score first.
-const buildBoard = (scenarioId) =>
-  loadFeedbacks()
-    .filter((f) => f.scenarioId === scenarioId)
-    .map((f) => ({ id: f.id, score: f.score, date: f.date }));
-
-// Same scenario when both carry an id, else fall back to title (for entries saved before scenarioId existed).
-const sameScenario = (a, b) =>
-  a.scenarioId != null && b.scenarioId != null ? a.scenarioId === b.scenarioId : a.title === b.title;
 
 function MedalGoals({ score }) {
   const tiers = [...MEDAL_TIERS].reverse(); // display bronze -> gold
@@ -185,53 +157,55 @@ function Evaluation({ ev, favorites = [], onToggleFav }) {
   );
 }
 
-// Post-practice modal: medal for this score + the player's personal top-10 for this scenario.
-// The just-finished attempt (entry.id) is highlighted; if it cracks the top 10 it slides in with a glow.
-function ResultModal({ entry, board, scenario, onClose }) {
-  const top = [...board].sort((a, b) => b.score - a.score).slice(0, 10);
-  const rank = top.findIndex((e) => e.id === entry.id) + 1; // 0 = did not make the top 10
-  const inTop = rank > 0;
-  const medal = medalFor(entry.score);
-  const next = nextTier(entry.score);
+// Leaderboard screen: the score of the conversation that just ended, then the global Top 10
+// from D1. Sits between the conversation and the evaluation (16.09.2026 flow).
+// Before login everyone is "Anonym", so the ranking only gets names once Google auth is on.
+function Leaderboard({ score, board, scenario, loading, onContinue }) {
+  const medal = medalFor(score);
+  const next = nextTier(score);
+  const top = board?.top || [];
+  const me = board?.me;
+  const inTop = top.some((r) => r.me);
 
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal result-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-        <button className="modal-close" onClick={onClose} aria-label="Schließen">×</button>
-
-        <div className={`result-hero score-${scoreClass(entry.score)}`}>
-          <span className={`medal medal-${medal ? medal.key : "none"} medal-lg`} />
-          <div className="result-tier">{medal ? medal.label : "Keine Medaille"}</div>
-          <div className="result-score">{entry.score}<span>/100</span></div>
-          {next && (
-            <div className="result-next">Noch {next.min - entry.score} Punkte bis {next.label}</div>
-          )}
-        </div>
-
-        <div className="lb-head">
-          <span>Bestenliste{scenario ? ` · ${scenario}` : ""}</span>
-          {inTop && <span className="lb-rank-badge">Neu auf Platz {rank}</span>}
-        </div>
-
-        <ol className="lb-list">
-          {top.map((e, i) => {
-            const me = e.id === entry.id;
-            return (
-              <li key={e.id} className={`lb-row ${me ? "new" : ""}`}>
-                <span className="lb-rank">{i + 1}</span>
-                <span className="lb-name">{me ? "Du (dieser Versuch)" : "Du"}</span>
-                <span className="lb-date">{e.date}</span>
-                <span className={`lb-score score-badge score-${scoreClass(e.score)}`}>{e.score}</span>
-              </li>
-            );
-          })}
-        </ol>
-
-        {!inTop && (
-          <p className="lb-miss">Diesmal nicht in den Top 10. Dein Bestwert bleibt {top[0]?.score}.</p>
+    <div className="eval">
+      <div className={`result-hero score-${scoreClass(score)}`}>
+        <span className={`medal medal-${medal ? medal.key : "none"} medal-lg`} />
+        <div className="result-tier">{medal ? medal.label : "Keine Medaille"}</div>
+        <div className="result-score">{score}<span>/100</span></div>
+        {next && (
+          <div className="result-next">Noch {next.min - score} Punkte bis {next.label}</div>
         )}
+      </div>
 
-        <button className="btn btn-primary result-cta" onClick={onClose}>Weiter</button>
+      <div className="lb-head">
+        <span>Bestenliste{scenario ? ` · ${scenario}` : ""}</span>
+        {me?.rank && <span className="lb-rank-badge">Platz {me.rank}</span>}
+      </div>
+
+      {loading ? (
+        <p className="panel muted">Bestenliste lädt…</p>
+      ) : top.length === 0 ? (
+        <p className="panel muted">Noch keine Ergebnisse für dieses Szenario.</p>
+      ) : (
+        <ol className="lb-list">
+          {top.map((r) => (
+            <li key={r.rank} className={`lb-row ${r.me ? "new" : ""}`}>
+              <span className="lb-rank">{r.rank}</span>
+              <span className="lb-name">{r.me ? "Du" : r.name}</span>
+              <span className="lb-date">{r.plays} {r.plays === 1 ? "Versuch" : "Versuche"}</span>
+              <span className={`lb-score score-badge score-${scoreClass(r.score)}`}>{r.score}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {!loading && !inTop && me?.rank && (
+        <p className="lb-miss">Diesmal nicht in den Top 10. Dein Bestwert ist {me.best} (Platz {me.rank}).</p>
+      )}
+
+      <div className="btn-row">
+        <button className="btn btn-primary" onClick={onContinue}>Zur Auswertung</button>
       </div>
     </div>
   );
@@ -264,8 +238,8 @@ function FavItem({ f, onReview, onToggle }) {
               <span className="corr-note" style={{ marginTop: 0 }}>{f.en}</span>
             </div>
           )}
-          {(f.scenario || f.date) && (
-            <div className="fb-date">{[favChip(f), f.scenario, f.date].filter(Boolean).join(" · ")}</div>
+          {(f.scenario || f.createdAt) && (
+            <div className="fb-date">{[favChip(f), f.scenario, favDate(f)].filter(Boolean).join(" · ")}</div>
           )}
         </div>
         <div className="fav-actions">
@@ -462,7 +436,7 @@ function TextReader({ text, favKeys, onToggleFav, onBack }) {
 // ponytail: Web Speech API é nativo mas só confiável no Chrome. Trocar por Realtime API se a voz robótica incomodar.
 export default function Home() {
   const [scenario, setScenario] = useState(null);
-  const [stage, setStage] = useState("intro"); // intro | chat | feedback
+  const [stage, setStage] = useState("intro"); // intro | chat | leaderboard | feedback
   const [showEn, setShowEn] = useState(false); // intro em inglês?
   const [showTr, setShowTr] = useState(false); // mostrar tradução ao lado (oculta por padrão)
   const [showVocabEn, setShowVocabEn] = useState(false);
@@ -473,41 +447,66 @@ export default function Home() {
   const [lvl, setLvl] = useState("Alle"); // CEFR level filter
   const [messages, setMessages] = useState([]);
   const [feedback, setFeedback] = useState(null); // evaluation object
-  const [result, setResult] = useState(null); // post-practice modal: { entry, board, scenario } or null
-  const [favorites, setFavorites] = useState([]); // favorited corrections
+  const [board, setBoard] = useState(null); // leaderboard for the conversation that just ended
+  const [boardBusy, setBoardBusy] = useState(false);
+  const [me, setMe] = useState(null); // { id, email, anonymous, streak } from /api/me
+  const [favorites, setFavorites] = useState([]); // favorited items, loaded from D1
   const [listening, setListening] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const recRef = useRef(null);
 
+  // Who am I (anonymous id on first visit, Google account once login is configured) and
+  // what have I saved. Both come from D1; nothing is kept in the browser any more.
   useEffect(() => {
-    let favs = loadJSON("favorites");
-    if (DEMO_SEED && favs.length === 0) {
-      favs = SEED_FAVORITES;
-      localStorage.setItem("favorites", JSON.stringify(favs));
-    }
-    setFavorites(favs);
+    let alive = true;
+    (async () => {
+      try {
+        // Sequential on purpose: the first call is what mints the anonymous id and sets the
+        // cookie, so firing both at once would create two users and attach the data to one.
+        const profile = await getJSON("/api/me");
+        const saved = await getJSON("/api/favorites");
+        if (!alive) return;
+        setMe(profile);
+        setFavorites(saved.favorites || []);
+      } catch (e) {
+        if (alive) setError("Daten konnten nicht geladen werden: " + e.message);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  function saveFavs(next) {
-    setFavorites(next);
-    localStorage.setItem("favorites", JSON.stringify(next));
-  }
-
-  // Star/unstar any item (correction, vocab, phrase, message) into the "Learn more" repo.
-  function toggleFav(item) {
+  // Star/unstar any item (correction, vocab, phrase, message, word) into the "Learn more" repo.
+  // The list updates first and the request follows, so the star never lags behind the tap;
+  // a failed write rolls the list back rather than lying about what was saved.
+  async function toggleFav(item) {
     const key = favKey(item);
     const has = favorites.some((f) => favKey(f) === key);
-    const next = has
-      ? favorites.filter((f) => favKey(f) !== key)
-      : [{ ...item, scenario: scenario?.title, date: new Date().toLocaleString("pt-BR"), ts: Date.now(), reviews: 0 }, ...favorites];
-    saveFavs(next);
+    const before = favorites;
+    const entry = { ...item, scenario: scenario?.title, createdAt: new Date().toISOString(), reviews: 0 };
+    setFavorites(has ? favorites.filter((f) => favKey(f) !== key) : [entry, ...favorites]);
+    try {
+      if (has) await delJSON(`/api/favorites?key=${encodeURIComponent(key)}`);
+      else await postJSON("/api/favorites", { ...item, scenario: scenario?.title });
+    } catch (e) {
+      setFavorites(before);
+      setError("Favorit nicht gespeichert: " + e.message);
+    }
   }
 
   // "Got it" +1: at MASTER_AT the card moves to the collapsed "Gemeistert" pile.
-  function markReviewed(item) {
+  async function markReviewed(item) {
     const key = favKey(item);
-    saveFavs(favorites.map((f) => (favKey(f) === key ? { ...f, reviews: (f.reviews || 0) + 1 } : f)));
+    const before = favorites;
+    setFavorites(favorites.map((f) => (favKey(f) === key ? { ...f, reviews: (f.reviews || 0) + 1 } : f)));
+    try {
+      await postJSON("/api/favorites/review", { key });
+    } catch (e) {
+      setFavorites(before);
+      setError("Fortschritt nicht gespeichert: " + e.message);
+    }
   }
 
   function open(s) {
@@ -516,6 +515,7 @@ export default function Home() {
     setShowEn(false);
     setMessages([]);
     setFeedback(null);
+    setBoard(null);
     setError("");
   }
 
@@ -548,23 +548,24 @@ export default function Home() {
     }
   }
 
-  function saveFeedback(ev, transcript = []) {
-    const entry = {
-      id: Date.now(),
-      scenarioId: scenario.id,
-      title: scenario.title,
-      date: new Date().toLocaleString("pt-BR"),
-      transcript,
-      ...ev,
-    };
-    // ponytail: histórico ainda grava no localStorage, só não é mais exibido. Remover a gravação se nunca voltar a tela de histórico.
-    localStorage.setItem("feedbacks", JSON.stringify([entry, ...loadFeedbacks()]));
-    return entry;
-  }
-
-  // Open the result modal for a just-saved attempt: builds this scenario's personal leaderboard.
-  function showResult(entry) {
-    setResult({ entry, board: buildBoard(entry.scenarioId), scenario: entry.title });
+  // Store the finished conversation (transcript + evaluation) and take the leaderboard that
+  // comes back with it, so the next screen is ready without a second round trip.
+  async function saveSession(ev, transcript = []) {
+    setBoardBusy(true);
+    try {
+      const saved = await postJSON("/api/sessions", {
+        scenarioId: scenario.id,
+        title: scenario.title,
+        transcript,
+        evaluation: ev,
+      });
+      setBoard(saved.board);
+      if (saved.streak != null) setMe((m) => (m ? { ...m, streak: saved.streak } : m));
+    } catch (e) {
+      setError("Ergebnis nicht gespeichert: " + e.message);
+    } finally {
+      setBoardBusy(false);
+    }
   }
 
   // ponytail: preview sem IA. Injeta conversa + avaliação de exemplo. Remover quando a API estiver ativa.
@@ -594,26 +595,13 @@ export default function Home() {
     };
     setMessages(convo);
     setFeedback(ev);
-    showResult(saveFeedback(ev, convo));
-    setStage("feedback");
-  }
-
-  // ponytail: preview do modal de resultado com placar estático (rank 3 -> mostra a transição de entrada no top 10).
-  // Não grava nada; só abre o modal. Remover junto com o botão quando o fluxo real bastar.
-  function demoResult() {
-    const past = [
-      { id: 1, score: 96, date: "12/09/2026 10:10" },
-      { id: 2, score: 91, date: "05/09/2026 18:20" },
-      { id: 3, score: 84, date: "01/09/2026 09:15" },
-      { id: 4, score: 80, date: "28/08/2026 20:05" },
-      { id: 5, score: 77, date: "22/08/2026 12:40" },
-      { id: 6, score: 74, date: "15/08/2026 08:30" },
-      { id: 7, score: 70, date: "10/08/2026 19:55" },
-      { id: 8, score: 66, date: "03/08/2026 14:12" },
-      { id: 9, score: 61, date: "28/07/2026 16:00" },
-    ];
-    const entry = { id: 999, score: 88, date: new Date().toLocaleString("pt-BR") };
-    setResult({ entry, board: [...past, entry], scenario: scenario?.title });
+    setStage("leaderboard");
+    // The demo score is fake, so it is never written: the board is only read here.
+    setBoardBusy(true);
+    getJSON(`/api/leaderboard?scenarioId=${encodeURIComponent(scenario.id)}`)
+      .then(setBoard)
+      .catch(() => setBoard(null))
+      .finally(() => setBoardBusy(false));
   }
 
   async function endConversation() {
@@ -624,8 +612,8 @@ export default function Home() {
     try {
       const ev = await postJSON("/api/feedback", { messages, scenarioId: scenario.id });
       setFeedback(ev);
-      showResult(saveFeedback(ev, messages));
-      setStage("feedback");
+      setStage("leaderboard");
+      await saveSession(ev, messages);
     } catch (e) {
       setError("Feedback fehlgeschlagen: " + e.message);
     } finally {
@@ -680,7 +668,7 @@ export default function Home() {
           </button>
         </nav>
         <div className="topbar-right">
-          <span className="streak" title="Serie">7 Tage</span>
+          <span className="streak" title="Serie">{me?.streak ?? 0} Tage</span>
           <AuthButton />
         </div>
       </div>
@@ -850,7 +838,7 @@ export default function Home() {
                 <div className="learn-stats">
                   <div className="lstat"><span className="lstat-num">{active.length}</span> Zu üben</div>
                   <div className="lstat"><span className="lstat-num">{mastered.length}</span> Gemeistert</div>
-                  <div className="lstat"><span className="lstat-num">7</span> Tage Serie</div>
+                  <div className="lstat"><span className="lstat-num">{me?.streak ?? 0}</span> Tage Serie</div>
                 </div>
                 {topStruggle && (
                   <p className="learn-struggle">
@@ -892,14 +880,6 @@ export default function Home() {
   return (
     <div className="app">
       {topbar}
-      {result && (
-        <ResultModal
-          entry={result.entry}
-          board={result.board}
-          scenario={result.scenario}
-          onClose={() => setResult(null)}
-        />
-      )}
       <main className={`container ${stage === "intro" ? "" : "narrow"}`}>
       <button className="btn-ghost" onClick={back}>
         ← Zurück zur Übersicht
@@ -1000,9 +980,6 @@ export default function Home() {
             <button className="btn spacer" onClick={demo}>
               Vorschau (Demo)
             </button>
-            <button className="btn" onClick={demoResult}>
-              Ergebnis-Demo
-            </button>
           </div>
         </>
       )}
@@ -1034,6 +1011,20 @@ export default function Home() {
               );
             })}
           </div>
+        </>
+      )}
+
+      {stage === "leaderboard" && feedback && (
+        <>
+          <h2 style={{ margin: "24px 0 12px" }}>Dein Ergebnis</h2>
+          {error && <p className="error">{error}</p>}
+          <Leaderboard
+            score={feedback.score}
+            board={board}
+            scenario={scenario.title}
+            loading={boardBusy}
+            onContinue={() => setStage("feedback")}
+          />
         </>
       )}
 
