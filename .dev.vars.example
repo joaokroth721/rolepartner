@@ -1,0 +1,17 @@
+# Mesmas variáveis do .env.example, mas pro runtime do Cloudflare (workerd).
+# `next dev` lê .env.local; `npm run preview` (wrangler) lê .dev.vars.
+# Copie pra .dev.vars (ignorado pelo git) quando for testar no workerd local.
+
+OPENAI_API_KEY=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+AUTH_SECRET=
+# Domínio público do app. Em produção: https://<worker>.<subdominio>.workers.dev
+AUTH_URL=http://localhost:8787
+
+# Em produção estas quatro viram secrets do Worker, não arquivo:
+#   npx wrangler secret put OPENAI_API_KEY
+#   npx wrangler secret put GOOGLE_CLIENT_ID
+#   npx wrangler secret put GOOGLE_CLIENT_SECRET
+#   npx wrangler secret put AUTH_SECRET
+# E AUTH_URL entra como var normal no wrangler.jsonc ("vars") ou como secret.

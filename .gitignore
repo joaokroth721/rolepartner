@@ -7,3 +7,9 @@
 .DS_Store
 *.pem
 npm-debug.log*
+
+# Cloudflare (OpenNext)
+/.open-next
+/.wrangler
+.dev.vars
+cloudflare-env.d.ts

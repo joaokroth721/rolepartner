@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "rolepartner",
+  "compatibility_date": "2026-09-01",
+  // The Worker runtime is workerd, not Node: Next and its deps need the Node compat layer.
+  "compatibility_flags": ["nodejs_compat"],
+  // Prerendered pages and /public are served as static assets (free and unmetered),
+  // so only the /api routes spend the Worker request budget.
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  }
+}
