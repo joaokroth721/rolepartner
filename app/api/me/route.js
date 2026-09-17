@@ -1,23 +1,33 @@
-import { getDb, resolveUser, json, fail, currentStreak } from "../../db";
+import { getDb, resolveUser, json, oops, currentStreak, clearedCookie } from "../../db";
 
 // Bootstrap call: identifies the browser (minting the anonymous id on first visit),
 // and returns what the topbar needs. The streak is measured, not hardcoded.
+// The user's id is deliberately NOT returned: it is the value of the identity cookie,
+// so handing it to page JavaScript would undo the cookie's HttpOnly flag.
 export async function GET(req) {
   try {
     const db = await getDb();
-    const { user, setCookie } = await resolveUser(db, req);
+    const { user, setCookie, clearCookie } = await resolveUser(db, req);
     const streak = await currentStreak(db, user.id);
     return json(
       {
-        id: user.id,
         email: user.email || null,
         name: user.name || null,
         anonymous: !user.email,
         streak,
       },
-      { setCookie }
+      { setCookie, clearCookie }
     );
   } catch (e) {
-    return fail(e.message);
+    return oops("me", e);
   }
+}
+
+// Called on sign-out. NextAuth clears its own session cookie but knows nothing about
+// rp_uid, and a stale rp_uid on a shared machine is exactly how one person ends up
+// looking at another's collection.
+export async function DELETE() {
+  const res = Response.json({ ok: true });
+  res.headers.append("set-cookie", clearedCookie());
+  return res;
 }

@@ -6,6 +6,7 @@ import { scenarios } from "./scenarios";
 import { texts } from "./texts";
 import { splitSentences, tokenize, isWord, glossKey } from "./tokenize.mjs";
 import { favKey, MASTER_AT } from "./favkey";
+import { WEIGHTS } from "./scoring";
 
 // Favorites, transcripts and scores live in D1 (see app/api/favorites, /sessions, /leaderboard).
 // favKey is imported rather than defined here so the client and the server always agree on
@@ -23,7 +24,16 @@ function AuthButton() {
     );
   const src = session.user?.image;
   return (
-    <button className="avatar-btn" title={`${session.user?.name || "Konto"} — abmelden`} onClick={() => signOut()}>
+    <button
+      className="avatar-btn"
+      title={`${session.user?.name || "Konto"} — abmelden`}
+      onClick={async () => {
+        // NextAuth clears its own cookie; rp_uid is ours to drop, or the next person on
+        // this machine inherits the session's identity.
+        await fetch("/api/me", { method: "DELETE" }).catch(() => {});
+        signOut();
+      }}
+    >
       {src ? <img className="avatar" src={src} alt="" /> : <div className="avatar" aria-hidden />}
     </button>
   );
@@ -111,6 +121,8 @@ function Evaluation({ ev, favorites = [], onToggleFav }) {
 
       <MedalGoals score={ev.score} />
 
+      <ScoreBreakdown breakdown={ev.breakdown} />
+
       {ev.strengths?.length > 0 && (
         <div className="panel eval-sec">
           <div className="brief-label">Das lief gut</div>
@@ -160,6 +172,48 @@ function Evaluation({ ev, favorites = [], onToggleFav }) {
 // Leaderboard screen: the score of the conversation that just ended, then the global Top 10
 // from D1. Sits between the conversation and the evaluation (16.09.2026 flow).
 // Before login everyone is "Anonym", so the ranking only gets names once Google auth is on.
+// Where the score came from. The server returns the same parts it added up, so this is a
+// report of the real calculation, not a second opinion about it.
+const BREAKDOWN_LABEL = {
+  goal: "Ziel erreicht",
+  tasks: "Aufgaben",
+  grammar: "Grammatik",
+  vocabulary: "Wortschatz",
+  engagement: "Gesprächsanteil",
+};
+
+function ScoreBreakdown({ breakdown }) {
+  if (!breakdown) return null;
+  return (
+    <div className="panel eval-sec">
+      <div className="brief-label">So kommt die Punktzahl zustande</div>
+      <div className="metrics">
+        {Object.keys(BREAKDOWN_LABEL).map((key) => {
+          const got = breakdown[key] || 0;
+          const max = WEIGHTS[key];
+          return (
+            <div className="metric" key={key}>
+              <div className="metric-head">
+                <span>{BREAKDOWN_LABEL[key]}</span>
+                <span className="metric-val">{got}/{max}</span>
+              </div>
+              <div className="metric-bar">
+                <span className="on" style={{ flexGrow: got || 0.001 }} />
+                <span style={{ flexGrow: Math.max(max - got, 0.001) }} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {breakdown.penalty > 0 && (
+        <p className="corr-note" style={{ marginTop: 12 }}>
+          Abzug für Fehler: -{breakdown.penalty}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function Leaderboard({ score, board, scenario, loading, onContinue }) {
   const medal = medalFor(score);
   const next = nextTier(score);
@@ -548,36 +602,19 @@ export default function Home() {
     }
   }
 
-  // Store the finished conversation (transcript + evaluation) and take the leaderboard that
-  // comes back with it, so the next screen is ready without a second round trip.
-  async function saveSession(ev, transcript = []) {
-    setBoardBusy(true);
-    try {
-      const saved = await postJSON("/api/sessions", {
-        scenarioId: scenario.id,
-        title: scenario.title,
-        transcript,
-        evaluation: ev,
-      });
-      setBoard(saved.board);
-      if (saved.streak != null) setMe((m) => (m ? { ...m, streak: saved.streak } : m));
-    } catch (e) {
-      setError("Ergebnis nicht gespeichert: " + e.message);
-    } finally {
-      setBoardBusy(false);
-    }
-  }
-
   async function endConversation() {
     recRef.current?.abort?.();
     speechSynthesis.cancel();
     setBusy(true);
     setError("");
     try {
-      const ev = await postJSON("/api/feedback", { messages, scenarioId: scenario.id });
-      setFeedback(ev);
+      // The server scores the conversation, stores it, and returns the board with it:
+      // the client never sends a score, so it cannot invent one.
+      const res = await postJSON("/api/feedback", { messages, scenarioId: scenario.id });
+      setFeedback(res.evaluation);
+      setBoard(res.board);
+      if (res.streak != null) setMe((m) => (m ? { ...m, streak: res.streak } : m));
       setStage("leaderboard");
-      await saveSession(ev, messages);
     } catch (e) {
       setError("Feedback fehlgeschlagen: " + e.message);
     } finally {

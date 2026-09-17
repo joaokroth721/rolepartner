@@ -1,14 +1,16 @@
-import { getDb, resolveUser, json, fail, readBoard } from "../../db";
+import { getDb, resolveUser, json, oops, readBoard } from "../../db";
+import { knownScenario } from "../../guard";
 
 // Top 10. `scenarioId` narrows it to one scenario; without it the ranking spans the app.
 export async function GET(req) {
   try {
-    const scenarioId = new URL(req.url).searchParams.get("scenarioId");
+    const asked = new URL(req.url).searchParams.get("scenarioId");
+    const scenarioId = asked ? knownScenario(asked)?.id || null : null;
     const db = await getDb();
-    const { user, setCookie } = await resolveUser(db, req);
+    const { user, setCookie, clearCookie } = await resolveUser(db, req);
     const board = await readBoard(db, { scenarioId, userId: user.id });
-    return json(board, { setCookie });
+    return json(board, { setCookie, clearCookie });
   } catch (e) {
-    return fail(e.message);
+    return oops("leaderboard", e);
   }
 }

@@ -1,4 +1,5 @@
-import { getDb, resolveUser, json, fail } from "../../db";
+import { getDb, resolveUser, json, fail, oops } from "../../db";
+import { wrongOrigin } from "../../guard";
 import { favKey, FAV_TYPES } from "../../favkey";
 import { normalizeTag } from "../../tags";
 
@@ -18,18 +19,20 @@ const toClient = (row) => ({
 export async function GET(req) {
   try {
     const db = await getDb();
-    const { user, setCookie } = await resolveUser(db, req);
+    const { user, setCookie, clearCookie } = await resolveUser(db, req);
     const { results } = await db
       .prepare("SELECT * FROM favorites WHERE user_id = ? ORDER BY created_at DESC")
       .bind(user.id)
       .all();
-    return json({ favorites: (results || []).map(toClient) }, { setCookie });
+    return json({ favorites: (results || []).map(toClient) }, { setCookie, clearCookie });
   } catch (e) {
-    return fail(e.message);
+    return oops("favorites.get", e);
   }
 }
 
 export async function POST(req) {
+  const bad = wrongOrigin(req);
+  if (bad) return bad;
   try {
     const item = await req.json();
     const type = item.type || "correction";
@@ -39,7 +42,7 @@ export async function POST(req) {
     const payload = Object.fromEntries(Object.entries(item).filter(([k]) => !COLUMNS.includes(k)));
 
     const db = await getDb();
-    const { user, setCookie } = await resolveUser(db, req);
+    const { user, setCookie, clearCookie } = await resolveUser(db, req);
     await db
       .prepare(
         `INSERT INTO favorites (user_id, fav_key, type, payload, tag, scenario, created_at)
@@ -61,22 +64,24 @@ export async function POST(req) {
       .prepare("SELECT * FROM favorites WHERE user_id = ? AND fav_key = ?")
       .bind(user.id, key)
       .first();
-    return json({ favorite: toClient(row) }, { setCookie });
+    return json({ favorite: toClient(row) }, { setCookie, clearCookie });
   } catch (e) {
-    return fail(e.message);
+    return oops("favorites.post", e);
   }
 }
 
 // Unstar. The key is type-aware (see app/favkey.js), so it is unique per user.
 export async function DELETE(req) {
+  const bad = wrongOrigin(req);
+  if (bad) return bad;
   try {
     const key = new URL(req.url).searchParams.get("key");
     if (!key) return fail("Kein Schlüssel angegeben.", 400);
     const db = await getDb();
-    const { user, setCookie } = await resolveUser(db, req);
+    const { user, setCookie, clearCookie } = await resolveUser(db, req);
     await db.prepare("DELETE FROM favorites WHERE user_id = ? AND fav_key = ?").bind(user.id, key).run();
-    return json({ ok: true }, { setCookie });
+    return json({ ok: true }, { setCookie, clearCookie });
   } catch (e) {
-    return fail(e.message);
+    return oops("favorites.delete", e);
   }
 }

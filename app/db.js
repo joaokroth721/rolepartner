@@ -49,7 +49,7 @@ export async function resolveUser(db, req) {
         .prepare("UPDATE users SET last_seen_at = ?, name = ?, avatar_url = ? WHERE id = ?")
         .bind(now, google.name || found.name, google.image || found.avatar_url, found.id)
         .run();
-      return { user: { ...found, last_seen_at: now }, setCookie: found.id !== cookieId ? found.id : null };
+      return { user: { ...found, last_seen_at: now }, clearCookie: Boolean(cookieId) };
     }
     // First login on a browser that already collected favorites anonymously: claim that row.
     const anon = cookieId
@@ -67,11 +67,18 @@ export async function resolveUser(db, req) {
         .bind(id, google.email, google.name || null, google.image || null, now, now)
         .run();
     }
-    return { user: { id, email: google.email, name: google.name || null }, setCookie: id !== cookieId ? id : null };
+    return { user: { id, email: google.email, name: google.name || null }, clearCookie: Boolean(cookieId) };
   }
 
   if (cookieId) {
-    const found = await db.prepare("SELECT * FROM users WHERE id = ?").bind(cookieId).first();
+    // `email IS NULL` is the security boundary: once a row belongs to a Google account, the
+    // cookie alone must never reach it again. Without this, the cookie left behind by a
+    // signed-out account would still unlock that account's data for the next person on the
+    // machine, and NextAuth's signOut() does not clear this cookie.
+    const found = await db
+      .prepare("SELECT * FROM users WHERE id = ? AND email IS NULL")
+      .bind(cookieId)
+      .first();
     if (found) {
       await db.prepare("UPDATE users SET last_seen_at = ? WHERE id = ?").bind(now, found.id).run();
       return { user: found, setCookie: null };
@@ -86,19 +93,36 @@ export async function resolveUser(db, req) {
   return { user: { id, email: null, name: null }, setCookie: id };
 }
 
-// JSON response that also hands back the anonymous id when one was just minted.
-export function json(data, { setCookie = null, status = 200 } = {}) {
+// JSON response that also hands back the anonymous id when one was just minted, or drops
+// it once a Google session is the identity, so the two can never be confused.
+export function json(data, { setCookie = null, clearCookie = false, status = 200 } = {}) {
   const res = Response.json(data, { status });
   if (setCookie) {
     res.headers.append(
       "set-cookie",
       `${UID_COOKIE}=${setCookie}; Path=/; Max-Age=${YEAR}; HttpOnly; SameSite=Lax; Secure`
     );
+  } else if (clearCookie) {
+    res.headers.append("set-cookie", clearedCookie());
   }
   return res;
 }
 
-export const fail = (message, status = 500) => Response.json({ error: message }, { status });
+export const clearedCookie = () => `${UID_COOKIE}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax; Secure`;
+
+/**
+ * Deliberate, safe-to-show errors only.
+ *
+ * `fail("...", 400)` messages are written here and meant for the user. Unexpected
+ * exceptions go through `oops`, which keeps the detail in the Worker log instead of
+ * handing an anonymous caller our schema, table names and binding configuration.
+ */
+export const fail = (message, status = 400) => Response.json({ error: message }, { status });
+
+export function oops(where, e) {
+  console.error(`[${where}]`, e?.stack || e);
+  return Response.json({ error: "Serverfehler. Bitte später erneut versuchen." }, { status: 500 });
+}
 
 // Consecutive days with a finished conversation, counting back from today (yesterday still
 // counts, so the streak does not break until a full day is missed).

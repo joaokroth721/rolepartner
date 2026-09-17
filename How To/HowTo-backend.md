@@ -17,6 +17,8 @@ npx wrangler d1 migrations apply rolepartner --remote   # production
 npx wrangler d1 migrations apply rolepartner --local    # local dev / npm run preview
 ```
 
+Re-run these after pulling any change that adds a file to `migrations/`.
+
 Deploy as usual with `npm run deploy`. Until the id is pasted in, the deploy fails: the
 binding points at a database that does not exist.
 
@@ -30,6 +32,8 @@ binding points at a database that does not exist.
   Unique per `(user_id, fav_key)`; `fav_key` comes from `app/favkey.js`, shared with the client.
 - **sessions** — one finished conversation: transcript + evaluation + score.
   The leaderboard reads this table; there is no separate `scores` table.
+  Rows are written by `/api/feedback` only.
+- **ai_usage** — per-user, per-day counter for the three AI routes (`migrations/0002`).
 
 ## Who is the user, before login
 
@@ -44,12 +48,49 @@ survive it. Nothing else has to change.
 | Method | Path | What it does |
 | --- | --- | --- |
 | GET | `/api/me` | Identify the caller, mint the anonymous id, return the measured streak |
+| DELETE | `/api/me` | Drop the identity cookie; called on sign-out |
 | GET | `/api/favorites` | Everything this user starred |
 | POST | `/api/favorites` | Star an item (idempotent per `fav_key`) |
 | DELETE | `/api/favorites?key=…` | Unstar |
 | POST | `/api/favorites/review` | "Got it" +1; at 3 the card counts as mastered |
-| POST | `/api/sessions` | Save a finished conversation, returns the leaderboard for the next screen |
+| POST | `/api/feedback` | Evaluates the conversation, scores it, stores the session, returns the board |
 | GET | `/api/leaderboard` | Top 10 by best score; `?scenarioId=` narrows it to one scenario |
+
+There is deliberately no endpoint that accepts a score. `/api/feedback` is the only writer
+of `sessions`, because it is the only place a score is produced.
+
+## Scoring
+
+`app/scoring.js` turns a conversation into 0-100. The model is never asked for the score;
+it reports observations (goal reached, which tasks happened, grammar and vocabulary 0-5,
+the mistakes it found) and the server adds up fixed weights:
+
+| Part | Points | Where it comes from |
+| --- | --- | --- |
+| Goal reached | 30 | Model |
+| Tasks of the briefing | 20 | Model, one flag per task |
+| Grammar | 20 | Model's 0-5 rating |
+| Vocabulary | 20 | 12 measured from the transcript (target words actually said) + 8 from the rating |
+| Conversation held | 10 | Student turns, full marks at 6 |
+| Mistakes | up to -10 | One point per correction past the first two |
+
+Two conversations of the same quality therefore score the same, which is what makes the
+leaderboard comparable. `node app/scoring.selftest.mjs` checks the rules.
+
+## Safety
+
+- **The score cannot be sent in.** It is computed in `/api/feedback` from the model's own
+  output and written there. Nothing else writes `sessions`.
+- **Unknown scenario ids are rejected** against `app/scenarios.js`, so the leaderboard only
+  ever holds scenarios that exist.
+- **Daily AI allowance** per user (`DAILY_AI_CALLS` in `app/guard.js`), counted before the
+  model runs. This is the cap that protects the OpenAI bill.
+- **Size limits** on transcripts and reader lookups (`LIMITS` in `app/guard.js`).
+- **Same-origin required** for writes.
+- **A cookie can never reach a Google account.** The logged-out lookup filters on
+  `email IS NULL`, and sign-out drops the cookie via `DELETE /api/me`.
+- **Errors are generic.** Unexpected failures log server-side and return one fixed message,
+  so D1 error text never reaches a caller.
 
 ## Notes
 
