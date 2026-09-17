@@ -568,42 +568,6 @@ export default function Home() {
     }
   }
 
-  // ponytail: preview sem IA. Injeta conversa + avaliação de exemplo. Remover quando a API estiver ativa.
-  function demo() {
-    const convo = [
-      { role: "assistant", content: "Guten Tag! Wie kann ich Ihnen helfen?" },
-      { role: "user", content: "Guten Tag. Ich möchte eine Fahrkarte nach München, bitte." },
-      { role: "assistant", content: "Gerne. Einfach oder hin und zurück?" },
-      { role: "user", content: "Hin und zurück. Wann fährt der nächste Zug?" },
-      { role: "assistant", content: "Um 14:20 Uhr von Gleis 7. Das macht 59 Euro." },
-      { role: "user", content: "Perfekt, ich nehme das. Hier ist mein Karte." },
-    ];
-    const ev = {
-      score: 82,
-      grammar: 3,
-      vocab: 4,
-      summary: "You carried the purchase from start to finish with good fluency.",
-      strengths: [
-        'Used "hin und zurück" and "Wann fährt der nächste Zug?" well.',
-        "Completed the goal: bought the ticket.",
-      ],
-      corrections: [
-        { wrong: "Hier ist mein Karte", right: "Hier ist meine Karte", note: '"Karte" is feminine, so it takes "meine".', tag: "Genus/Artikel" },
-        { wrong: "ich nehme das", right: "ich nehme sie", note: '"sie" (the ticket) is more precise here.', tag: "Wortwahl" },
-      ],
-      tip: "Practice accusative articles (der/die/das -> den/die/das) to make your sentences sound more natural.",
-    };
-    setMessages(convo);
-    setFeedback(ev);
-    setStage("leaderboard");
-    // The demo score is fake, so it is never written: the board is only read here.
-    setBoardBusy(true);
-    getJSON(`/api/leaderboard?scenarioId=${encodeURIComponent(scenario.id)}`)
-      .then(setBoard)
-      .catch(() => setBoard(null))
-      .finally(() => setBoardBusy(false));
-  }
-
   async function endConversation() {
     recRef.current?.abort?.();
     speechSynthesis.cancel();
@@ -680,6 +644,7 @@ export default function Home() {
     return (
       <div className="app">
         {topbar}
+        {error && <p className="error container">{error}</p>}
         <TextReader
           text={openText}
           favKeys={new Set(favorites.map(favKey))}
@@ -721,6 +686,7 @@ export default function Home() {
         {topbar}
 
         <main className="container">
+          {error && <p className="error">{error}</p>}
           {tab === "practice" ? (
             <>
               <div className="filters">
@@ -976,9 +942,6 @@ export default function Home() {
           <div className="btn-row">
             <button className="btn btn-primary" onClick={() => setStage("chat")}>
               Los geht's
-            </button>
-            <button className="btn spacer" onClick={demo}>
-              Vorschau (Demo)
             </button>
           </div>
         </>

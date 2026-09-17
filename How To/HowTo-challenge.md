@@ -54,7 +54,7 @@ One object powers the whole flow:
 - **Dein Ziel / Goal** panel: `goal` + `tasks`. English (`goalEn`, `tasksEn`) sits blurred beside each line; the "Show English" toggle unblurs it.
 - **Wortschatz** panel: `vocab`, each with a star to save it to the "Review" repo.
 - **Nützliche Sätze** panel: `phrases`, same star behavior.
-- Buttons: **Los geht's** (starts the conversation), **Vorschau (Demo)** and **Ergebnis-Demo** (preview helpers, see below).
+- Button: **Los geht's** (starts the conversation).
 
 **What drives it**
 - Every field above is read straight off the scenario object. The three panels only render if their array is non-empty, so `vocab`/`phrases` are optional.
@@ -62,8 +62,6 @@ One object powers the whole flow:
 - "Los geht's" just runs `setStage("chat")`. No API call happens in the intro.
 
 **Preview buttons** (dev only, remove when the real flow is enough)
-- **Vorschau (Demo)** → `demo()`: injects a fake conversation + fake evaluation and jumps to feedback, so you can see the scored screen without talking.
-- **Ergebnis-Demo** → `demoResult()`: opens the result modal with a static 9-attempt leaderboard and a new score that lands at rank 3, to preview the medal + top-10 transition.
 
 ---
 
@@ -119,7 +117,7 @@ Triggered by **Gespräch beenden** → `endConversation()`. This does three thin
 | `grammar`, `vocab` | 0-5 sub-ratings. Still returned and stored, but no longer shown in the UI. |
 
 **Saving (`saveFeedback`)**
-Writes an entry to the `feedbacks` list in `localStorage`: `{ id, scenarioId, title, date, transcript, ...ev }`. This list is also the leaderboard source. `saveFeedback` returns the entry so the modal can highlight it.
+`saveSession()` POSTs the transcript and the evaluation to `/api/sessions`, which stores a row in D1 and returns the Top 10 for the leaderboard screen that follows the conversation.
 
 **The feedback screen (`Evaluation` component)**
 - `score-card`: the big `score/100`, colored by band (`good` ≥80, `ok` ≥60, else `low`), plus the `summary`.
@@ -143,4 +141,4 @@ The leaderboard is **per-scenario and personal** (your own attempts, ranked). A 
 3. Write the briefing: `place`/`placeEn`, `goal`/`goalEn`, `tasks`/`tasksEn` (keep each `…En` array the same length and order as its German twin).
 4. Add `vocab` and `phrases` (each `{ de, en }`). Both optional; empty just hides the panel. Note these also feed the chat model as target language (the `de` side), not just the intro panels.
 5. Write the `system` prompt: role, place, "stay in character, German only, short sentences, help when stuck." Keep it about persona and tone; the mission and vocab (`level`, `goal`, `tasks`, `vocab`, `phrases`) are appended automatically by `buildSystem`, so you no longer need to restate them in prose.
-6. That's it. No API, component, or CSS changes: chat reads `system` + the structured fields, feedback reads `title`, and the leaderboard keys off `id`. Test with the **Vorschau (Demo)** / **Ergebnis-Demo** buttons, then a real run.
+6. That's it. No API, component, or CSS changes: chat reads `system` + the structured fields, feedback reads `title`, and the leaderboard keys off `scenario_id`. Test with a real run.

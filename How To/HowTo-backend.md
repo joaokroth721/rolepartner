@@ -54,6 +54,4 @@ survive it. Nothing else has to change.
 ## Notes
 
 - The **streak** is derived from distinct days in `sessions`, not stored. No table to keep in sync.
-- The **demo button** writes nothing: its score is canned and must not enter a shared ranking.
-  It reads the real board so the screen looks right.
 - Before login every row on the leaderboard reads "Anonym"; names arrive with Google auth.

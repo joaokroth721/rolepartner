@@ -12,12 +12,10 @@ performance afterward. Currently set up for **German**.
    one-tap English translation).
 3. **Talk** — hit 🎤 *Sprechen*, speak in German, and the AI character replies by voice and
    text, staying in role.
-4. **End the conversation** — hit ✅ *Gespräch beenden* to get short written feedback (in
-   Portuguese): what you did well, key corrections, and one tip.
-5. **Review** — every feedback is saved under the **Feedback** tab on the main screen.
-
-There's also a 👀 *Vorschau (Demo)* button that shows the feedback flow with sample data,
-useful when the AI key has no credits.
+4. **End the conversation** — hit *Gespräch beenden*. The conversation is scored and you land
+   on the **leaderboard**: your score for this run and the global Top 10.
+5. **Read the evaluation** — what you did well, key corrections, and one tip.
+6. **Review** — star anything from any screen and it collects under the **Review** tab.
 
 ## Scenarios
 
@@ -31,7 +29,7 @@ useful when the AI key has no credits.
 - **AI SDK** (`ai` + `@ai-sdk/openai`) for the role-play and feedback, model `gpt-5-nano`.
 - **Web Speech API** (browser-native) for speech-to-text and text-to-speech — reliable in
   **Chrome**, no extra dependencies.
-- Feedback is stored in the browser's **localStorage** (per-device, no account).
+- **Cloudflare D1** stores favorites, conversation transcripts and scores; see `How To/HowTo-backend.md`.
 
 ## Structure
 
@@ -48,6 +46,6 @@ useful when the AI key has no credits.
 npm run dev        # starts on the default port; pass -- -p 5300 for a specific one
 ```
 
-Set an AI key in `.env.local` (`OPENAI_API_KEY=...`) for the chat and feedback to return real
-responses. Without credits, everything but the AI replies still works, and the demo button
-shows the intended feedback experience.
+Set an AI key in `.env.local` (`OPENAI_API_KEY=...`) for the chat, feedback and reader
+translations to return real responses. Without a key the catalog, the briefings, the reader's
+glossary words and the Review tab still work; anything that needs the model reports an error.
