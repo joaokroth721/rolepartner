@@ -28,7 +28,7 @@ Files: `next.config.mjs`, `open-next.config.ts`, `wrangler.jsonc`, deploy script
 from static assets. Page loads therefore count against the 100k/day request budget;
 only `/_next/*` and the SVGs are unmetered.
 
-Live at `https://rolepartner.rolepartner.workers.dev`.
+Live at `https://app.rolepartner.workers.dev`.
 
 ---
 
@@ -168,6 +168,24 @@ No migration, no new table, no new dependency. The CSS for the list was already 
 Three existing bugs fixed along the way: `toggleFav` hardcoding the scenario title,
 `navTo` not clearing the detail screen, and the Review empty state hiding history from
 users with no favorites.
+
+---
+
+## 8. Worker renamed
+
+`wrangler.jsonc` `name` changed from `rolepartner` to `app`, so the URL is
+`app.rolepartner.workers.dev` instead of `rolepartner.rolepartner.workers.dev`. The
+account subdomain is already `rolepartner`, and Cloudflare always serves
+`<worker>.<subdomain>.workers.dev`, so a two-label `rolepartner.workers.dev` is not
+available at all.
+
+Done now because it is nearly free at this point: no secrets had been set on the old
+worker yet and Google OAuth was not configured, so there was no redirect URI to update
+and nothing to re-add. The D1 binding carries over untouched, since it references the
+database by id.
+
+A rename creates a new Worker rather than moving the old one, so `rolepartner` has to be
+deleted separately or it keeps serving the old URL.
 
 ---
 

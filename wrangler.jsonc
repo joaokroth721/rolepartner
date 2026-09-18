@@ -1,7 +1,9 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
-  "name": "rolepartner",
+  // The URL is <worker name>.<account subdomain>.workers.dev, and the account subdomain is
+  // already "rolepartner", so naming the worker "app" gives app.rolepartner.workers.dev.
+  "name": "app",
   "compatibility_date": "2026-09-01",
   // The Worker runtime is workerd, not Node: Next and its deps need the Node compat layer.
   "compatibility_flags": ["nodejs_compat"],
