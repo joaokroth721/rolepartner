@@ -4,6 +4,23 @@
 
 - Do not use emojis anywhere (UI, code, comments, copy).
 
+## Work log
+
+`log.md` at the repo root is the running history of the project: what changed, and why
+each decision went the way it did. It is the part a diff cannot recover later.
+
+**Update it whenever you finish a piece of work.** Add to the current dated section, or
+open a new one when the date changes. Record:
+
+- what changed, and the commit it landed in
+- **why**, especially where an obvious-looking option was rejected
+- anything measured rather than assumed (sizes, limits, scores, timings)
+- corrections to something the log previously claimed, stated as corrections
+- what is left open, and whether it is blocked on code or on account setup
+
+Skip it for changes that leave no trace worth remembering, such as a typo fix. If a
+change alters how the app behaves, it belongs in the log.
+
 ## Screen names
 
 The whole app is one page (`app/page.js`) rendering state-driven screens. We refer to them by these names:
