@@ -13,9 +13,13 @@ The whole app is one page (`app/page.js`) rendering state-driven screens. We ref
 3. **conversation** — live voice chat with the AI partner (`scenario` open, `stage=chat`)
 4. **leaderboard** — score of the conversation that just ended + global Top 10 (`stage=leaderboard`)
 5. **evaluation** — score, corrections, tips after a conversation (`stage=feedback`)
-6. **feedback** — nav label "Review": favorited corrections only, no history logs (`tab=feedback`, no scenario open)
+6. **feedback** — nav label "Review", two sub-views chosen by `reviewView`: `collection`
+   (favorited corrections, the default) and `history` (past conversations)
+   (`tab=feedback`, no scenario open)
 7. **texts** — reading catalog: featured hero + list of reading texts (`tab=texts`, no text open)
 8. **reading** — a single reading text open in the reader (`openText` set)
+9. **session** — one past conversation reopened from the history list: score, breakdown,
+   corrections, transcript (`openSession` set)
 
 ## Process to create new challenges / texts
 

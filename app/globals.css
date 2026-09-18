@@ -441,12 +441,12 @@ h1.title {
 @media (max-width: 480px) { .goals { flex-direction: column; } }
 
 /* ---- Feedback list ---- */
-.fb-list { display: flex; flex-direction: column; gap: 14px; }
+.fb-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
 .fb-item { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 18px; }
-.fb-item-btn { display: block; width: 100%; text-align: left; cursor: pointer; transition: border-color 0.15s; }
+.fb-item-btn { display: block; width: 100%; text-align: left; cursor: pointer; font: inherit; color: inherit; transition: border-color 0.15s; }
 .fb-item-btn:hover { border-color: var(--accent); }
-.fb-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
-.fb-title { font-weight: 600; }
+.fb-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+.fb-title { display: flex; align-items: center; gap: 10px; font-weight: 600; }
 .fb-date { color: var(--muted); font-size: 13px; }
 .fb-body { white-space: pre-wrap; line-height: 1.6; margin: 0; }
 

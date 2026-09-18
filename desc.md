@@ -15,7 +15,9 @@ performance afterward. Currently set up for **German**.
 4. **End the conversation** — hit *Gespräch beenden*. The conversation is scored and you land
    on the **leaderboard**: your score for this run and the global Top 10.
 5. **Read the evaluation** — what you did well, key corrections, and one tip.
-6. **Review** — star anything from any screen and it collects under the **Review** tab.
+6. **Review** — star anything from any screen and it collects under the **Review** tab,
+   which also holds **Verlauf**: every conversation you finished, with its score, its
+   evaluation and its transcript.
 
 ## Scenarios
 

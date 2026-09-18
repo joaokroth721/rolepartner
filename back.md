@@ -47,9 +47,9 @@ Legenda de necessidade: **[BD]** banco de dados, **[Auth]** contas/login, **[Int
    Necessário: **[BD]** tabela `favorites` por usuário (`fav_key` único, `type`, `payload` jsonb, `tag`, `reviews`) + **[Auth]**. Endpoints: `GET/POST /api/favorites`, `DELETE /api/favorites/:favKey`, `PATCH .../review` (o "Got it"). **O enum de tags está duplicado** (schema em `feedback/route.js` + UI em `page.js`): extrair pra um módulo único (`app/tags.js`) importado pelos dois, pra não divergir do que o LLM emite / da coluna do BD.
    Obs.: há um seed de demonstração (`DEMO_SEED`/`SEED_FAVORITES`, no topo de `page.js` + o seed no `useEffect`) só pra visualizar a tela. **Remover ao ligar o backend.**
 
-7. **Histórico de sessões (persistência) — hoje é gravação morta.**
+7. **Histórico de sessões (persistência) — pronto, a tela Verlauf lê o que é gravado.**
    `saveFeedback()` grava cada sessão em `localStorage` (`"feedbacks"`: `{ id, scenarioId, title, date, transcript, score, grammar, vocab, summary, strengths, corrections, tip }`). Mas **nada lê esse histórico pra exibir**: `loadFeedbacks()` só é chamado dentro do próprio `saveFeedback()` pra prepend. É write-only (o `ponytail:` em `page.js:500` diz exatamente isso).
-   Necessário só se voltar a existir uma tela de histórico ou um trend agregado: **[BD]** tabela `sessions` por usuário (`created_at timestamptz` no lugar do `id` numérico) + **[Auth]**. Enquanto ninguém lê, é baixa prioridade — ou remover a gravação.
+   **FEITO.** A tabela `sessions` (D1) guarda transcript + evaluation + score, e `GET /api/sessions` agora lê isso de volta: sub-aba **Verlauf** dentro de Review, com lista paginada, agregado por cenário e a tela de detalhe (`openSession`). Ver `plan_session_history.md`. Não há delete: `sessions` é também a fonte do leaderboard e do streak.
 
 8. **Contas de usuário / avatar.** — LOGIN JÁ CONSTRUÍDO (Auth.js v5, sessão JWT, sem BD).
    O topo agora mostra "Anmelden" (login Google) ou o avatar do Google + logout (`AuthButton` em `page.js`). Config em `app/auth.js`, rota `app/api/auth/[...nextauth]/route.js`, `SessionProvider` em `app/providers.js`.

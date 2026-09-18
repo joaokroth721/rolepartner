@@ -31,8 +31,9 @@ binding points at a database that does not exist.
   fields sit in `payload` as JSON, so a new favorite type needs no migration.
   Unique per `(user_id, fav_key)`; `fav_key` comes from `app/favkey.js`, shared with the client.
 - **sessions** — one finished conversation: transcript + evaluation + score.
-  The leaderboard reads this table; there is no separate `scores` table.
-  Rows are written by `/api/feedback` only.
+  The leaderboard, the streak and the Verlauf (`/api/sessions`) read this table; there is
+  no separate `scores` table. Rows are written by `/api/feedback` only, and nothing deletes
+  them: a missing row would silently rewrite the leaderboard and break a streak.
 - **ai_usage** — per-user, per-day counter for the three AI routes (`migrations/0002`).
 
 ## Who is the user, before login
@@ -55,6 +56,8 @@ survive it. Nothing else has to change.
 | POST | `/api/favorites/review` | "Got it" +1; at 3 the card counts as mastered |
 | POST | `/api/feedback` | Evaluates the conversation, scores it, stores the session, returns the board |
 | GET | `/api/leaderboard` | Top 10 by best score; `?scenarioId=` narrows it to one scenario |
+| GET | `/api/sessions` | This user's finished conversations, newest first, plus the aggregate; `?limit=`, `?before=` (keyset cursor), `?scenarioId=` |
+| GET | `/api/sessions?id=…` | One past conversation with its transcript and evaluation; 404 when it is not this user's |
 
 There is deliberately no endpoint that accepts a score. `/api/feedback` is the only writer
 of `sessions`, because it is the only place a score is produced.

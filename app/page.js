@@ -313,6 +313,116 @@ function FavItem({ f, onReview, onToggle }) {
   );
 }
 
+// One past conversation in the Verlauf list. The medal dot and the score badge say at a
+// glance how the run went; the evaluation behind it is one tap away.
+function SessionRow({ s, onOpen }) {
+  const medal = medalFor(s.score);
+  return (
+    <li>
+      <button className="fb-item fb-item-btn" onClick={() => onOpen(s)}>
+        <div className="fb-head">
+          <span className="fb-title">
+            <span className={`medal medal-${medal ? medal.key : "none"}`} />
+            {s.title}
+          </span>
+          <span className={`score-badge score-${scoreClass(s.score)}`}>{s.score}</span>
+        </div>
+        <div className="fb-date">{new Date(s.createdAt).toLocaleString("pt-BR")}</div>
+      </button>
+    </li>
+  );
+}
+
+// Verlauf: finished conversations, newest first, with the aggregate on top.
+// `data` stays null until the first page lands, and also when that load failed — the
+// error banner above already says so, and an empty state there would be a lie.
+function HistoryList({ data, busy, anonymous, onOpen, onMore }) {
+  if (!data) return busy ? <p className="panel muted">Verlauf lädt…</p> : null;
+  const stats = data.stats;
+  return (
+    <>
+      <div className="learn-hero">
+        <div className="hero-eyebrow">Deine Gespräche</div>
+        <div className="learn-stats">
+          <div className="lstat"><span className="lstat-num">{stats?.plays ?? 0}</span> Gespräche</div>
+          <div className="lstat"><span className="lstat-num">{stats?.best ?? "-"}</span> Bestwert</div>
+          <div className="lstat"><span className="lstat-num">{stats?.avg ?? "-"}</span> Durchschnitt</div>
+        </div>
+        {stats?.perScenario?.length > 0 && (
+          <p className="learn-struggle">
+            {stats.perScenario.map((s) => `${s.title}: ${s.plays}x, Bestwert ${s.best}`).join(" · ")}
+          </p>
+        )}
+        {anonymous && (
+          <p className="learn-struggle">Ohne Anmeldung wird dein Verlauf nur in diesem Browser gespeichert.</p>
+        )}
+      </div>
+
+      {data.sessions.length === 0 ? (
+        <p className="panel muted">Noch keine Gespräche. Beende eine Übung, um sie hier zu sehen.</p>
+      ) : (
+        <ul className="fb-list">
+          {data.sessions.map((s) => (
+            <SessionRow key={s.id} s={s} onOpen={onOpen} />
+          ))}
+        </ul>
+      )}
+
+      {data.nextCursor && (
+        <div className="btn-row">
+          <button className="btn" onClick={onMore} disabled={busy}>
+            {busy ? "…" : "Mehr laden"}
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+// A past conversation reopened from the Verlauf: the stored evaluation rendered by the
+// same component as right after the run, so a correction missed back then can still be
+// starred, plus the transcript it was judged on.
+function SessionDetail({ session, favorites, onToggleFav, onBack }) {
+  const favKeys = new Set(favorites.map(favKey));
+  return (
+    <main className="container narrow">
+      <button className="btn-ghost" onClick={onBack}>
+        ← Zurück zum Verlauf
+      </button>
+
+      <h1 className="title" style={{ marginTop: 16 }}>{session.title}</h1>
+      <p className="subtitle" style={{ marginTop: 12 }}>
+        {new Date(session.createdAt).toLocaleString("pt-BR")}
+      </p>
+
+      {session.pending ? (
+        <p className="panel muted" style={{ marginTop: 24 }}>Gespräch lädt…</p>
+      ) : (
+        <>
+          <Evaluation ev={session.evaluation} favorites={favorites} onToggleFav={onToggleFav} />
+
+          <details className="mastered">
+            <summary>Gesprächsverlauf</summary>
+            <div className="chat">
+              {(session.transcript || []).map((m, i) => {
+                const item = { type: "message", text: m.content };
+                return (
+                  <div key={i} className={`bubble ${m.role}`}>
+                    {m.content}
+                    {m.role === "assistant" && (
+                      <StarButton active={favKeys.has(favKey(item))} onClick={() => onToggleFav(item)} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </details>
+        </>
+      )}
+    </main>
+  );
+}
+
 // Reading screen: tap glossary words for a translation, listen with sentence-by-sentence highlight.
 function TextReader({ text, favKeys, onToggleFav, onBack }) {
   const [playIdx, setPlayIdx] = useState(-1); // global sentence index being spoken (-1 = idle)
@@ -507,6 +617,10 @@ export default function Home() {
   const [showVocabEn, setShowVocabEn] = useState(false);
   const [showPhrasesEn, setShowPhrasesEn] = useState(false);
   const [tab, setTab] = useState("practice"); // main screen: practice | feedback | texts
+  const [reviewView, setReviewView] = useState("collection"); // Review tab: collection | history
+  const [history, setHistory] = useState(null); // { sessions, stats, nextCursor }; null = not loaded
+  const [historyBusy, setHistoryBusy] = useState(false);
+  const [openSession, setOpenSession] = useState(null); // a past conversation being read
   const [openText, setOpenText] = useState(null); // currently open reading text
   const [cat, setCat] = useState("Alle"); // scenario category filter
   const [lvl, setLvl] = useState("Alle"); // CEFR level filter
@@ -521,9 +635,12 @@ export default function Home() {
   const [error, setError] = useState("");
   const recRef = useRef(null);
   const chatStartedAt = useRef(null);
+  const historyAsked = useRef(false);
 
   // One name for the screen, shared by the UI, the analytics and the docs.
-  const screen = openText
+  const screen = openSession
+    ? "session"
+    : openText
     ? "reading"
     : scenario
     ? stage === "chat"
@@ -579,18 +696,77 @@ export default function Home() {
     };
   }, []);
 
+  // The history is fetched the first time the Verlauf view is opened, never in the
+  // bootstrap effect above: that one runs on every page load and its calls must stay
+  // sequential, so a third request there would slow down every first paint.
+  // One attempt per visit to the view: a failure shows the error instead of looping.
+  useEffect(() => {
+    const onHistory = tab === "feedback" && reviewView === "history";
+    if (!onHistory) {
+      historyAsked.current = false;
+      return;
+    }
+    if (history || historyAsked.current) return;
+    historyAsked.current = true;
+    let alive = true;
+    setHistoryBusy(true);
+    getJSON("/api/sessions")
+      .then((d) => {
+        if (alive) setHistory(d);
+      })
+      .catch((e) => {
+        if (alive) setError("Verlauf konnte nicht geladen werden: " + e.message);
+      })
+      .finally(() => {
+        if (alive) setHistoryBusy(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [tab, reviewView, history]);
+
+  // Next page of the history. `stats` belongs to the first page and is kept as it is.
+  async function loadMoreHistory() {
+    if (!history?.nextCursor || historyBusy) return;
+    setHistoryBusy(true);
+    try {
+      const d = await getJSON(`/api/sessions?before=${encodeURIComponent(history.nextCursor)}`);
+      setHistory((h) => ({ ...h, sessions: [...h.sessions, ...d.sessions], nextCursor: d.nextCursor }));
+    } catch (e) {
+      setError("Verlauf konnte nicht geladen werden: " + e.message);
+    } finally {
+      setHistoryBusy(false);
+    }
+  }
+
+  // The row is shown at once (title, score and date are already in the list) and the
+  // transcript and evaluation are merged in when they land.
+  async function openPast(row) {
+    setOpenSession({ ...row, pending: true });
+    setError("");
+    try {
+      const { session } = await getJSON(`/api/sessions?id=${row.id}`);
+      setOpenSession(session);
+    } catch (e) {
+      setError("Gespräch konnte nicht geladen werden: " + e.message);
+      setOpenSession(null);
+    }
+  }
+
   // Star/unstar any item (correction, vocab, phrase, message, word) into the "Learn more" repo.
   // The list updates first and the request follows, so the star never lags behind the tap;
   // a failed write rolls the list back rather than lying about what was saved.
-  async function toggleFav(item) {
+  // `scenarioTitle` is passed explicitly from the history screens, where no scenario is
+  // open and the label would otherwise be lost.
+  async function toggleFav(item, scenarioTitle = scenario?.title) {
     const key = favKey(item);
     const has = favorites.some((f) => favKey(f) === key);
     const before = favorites;
-    const entry = { ...item, scenario: scenario?.title, createdAt: new Date().toISOString(), reviews: 0 };
+    const entry = { ...item, scenario: scenarioTitle, createdAt: new Date().toISOString(), reviews: 0 };
     setFavorites(has ? favorites.filter((f) => favKey(f) !== key) : [entry, ...favorites]);
     try {
       if (has) await delJSON(`/api/favorites?key=${encodeURIComponent(key)}`);
-      else await postJSON("/api/favorites", { ...item, scenario: scenario?.title });
+      else await postJSON("/api/favorites", { ...item, scenario: scenarioTitle });
       posthog.capture("favorite_toggled", {
         fav_type: item.type || "correction",
         action: has ? "removed" : "added",
@@ -700,6 +876,10 @@ export default function Home() {
       const res = await postJSON("/api/feedback", { messages, scenarioId: scenario.id });
       setFeedback(res.evaluation);
       setBoard(res.board);
+      // The run that just finished is now a row in `sessions`; drop the cached list so
+      // the next visit to the Verlauf includes it.
+      setHistory(null);
+      historyAsked.current = false;
       if (res.streak != null) setMe((m) => (m ? { ...m, streak: res.streak } : m));
       setStage("leaderboard");
       const b = res.evaluation?.breakdown || {};
@@ -750,6 +930,7 @@ export default function Home() {
   const navTo = (t) => {
     setTab(t);
     setOpenText(null);
+    setOpenSession(null);
     speechSynthesis.cancel();
     if (scenario) back();
   };
@@ -767,7 +948,7 @@ export default function Home() {
           <button className={`nav-item ${!scenario && tab === "texts" ? "active" : ""}`} onClick={() => navTo("texts")}>
             Texts
           </button>
-          <button className={`nav-item ${!scenario && !openText && tab === "feedback" ? "active" : ""}`} onClick={() => navTo("feedback")}>
+          <button className={`nav-item ${!scenario && !openText && !openSession && tab === "feedback" ? "active" : ""}`} onClick={() => navTo("feedback")}>
             Review {favorites.length ? <span className="count">({favorites.length})</span> : null}
           </button>
         </nav>
@@ -778,6 +959,22 @@ export default function Home() {
       </div>
     </header>
   );
+
+  // ---- Session screen (a past conversation is open) ----
+  if (openSession) {
+    return (
+      <div className="app">
+        {topbar}
+        {error && <p className="error container">{error}</p>}
+        <SessionDetail
+          session={openSession}
+          favorites={favorites}
+          onToggleFav={(item) => toggleFav(item, openSession.title)}
+          onBack={() => setOpenSession(null)}
+        />
+      </div>
+    );
+  }
 
   // ---- Reading screen (a text is open) ----
   if (openText) {
@@ -935,44 +1132,71 @@ export default function Home() {
                 );
               })()}
             </>
-          ) : favorites.length === 0 ? (
-            <p className="panel muted">Noch keine Favoriten. Tippe auf den Stern bei einer Korrektur, Vokabel, einem Satz oder einer Nachricht, um sie hier zu sammeln.</p>
           ) : (
             <>
-              <div className="learn-hero">
-                <div className="hero-eyebrow">Deine Sammlung</div>
-                <div className="learn-stats">
-                  <div className="lstat"><span className="lstat-num">{active.length}</span> Zu üben</div>
-                  <div className="lstat"><span className="lstat-num">{mastered.length}</span> Gemeistert</div>
-                  <div className="lstat"><span className="lstat-num">{me?.streak ?? 0}</span> Tage Serie</div>
-                </div>
-                {topStruggle && (
-                  <p className="learn-struggle">
-                    Du sammelst oft Korrekturen zu <strong>{topStruggle[0]}</strong> ({topStruggle[1]}).
-                  </p>
-                )}
+              <div className="tabs">
+                <button
+                  className={`tab ${reviewView === "collection" ? "active" : ""}`}
+                  onClick={() => setReviewView("collection")}
+                >
+                  Sammlung {favorites.length ? <span className="count">({favorites.length})</span> : null}
+                </button>
+                <button
+                  className={`tab ${reviewView === "history" ? "active" : ""}`}
+                  onClick={() => setReviewView("history")}
+                >
+                  Verlauf {history?.stats?.plays ? <span className="count">({history.stats.plays})</span> : null}
+                </button>
               </div>
 
-              {groups.map((g) => (
-                <div key={g.t} className="panel learn-group">
-                  <div className="brief-label">{GROUP_LABEL[g.t]} ({g.items.length})</div>
-                  <ul className="corr-list">
-                    {g.items.map((f) => (
-                      <FavItem key={favKey(f)} f={f} onReview={markReviewed} onToggle={toggleFav} />
-                    ))}
-                  </ul>
+              {reviewView === "history" ? (
+                <HistoryList
+                  data={history}
+                  busy={historyBusy}
+                  anonymous={Boolean(me?.anonymous)}
+                  onOpen={openPast}
+                  onMore={loadMoreHistory}
+                />
+              ) : favorites.length === 0 ? (
+                <p className="panel muted">Noch keine Favoriten. Tippe auf den Stern bei einer Korrektur, Vokabel, einem Satz oder einer Nachricht, um sie hier zu sammeln.</p>
+              ) : (
+                <>
+                <div className="learn-hero">
+                  <div className="hero-eyebrow">Deine Sammlung</div>
+                  <div className="learn-stats">
+                    <div className="lstat"><span className="lstat-num">{active.length}</span> Zu üben</div>
+                    <div className="lstat"><span className="lstat-num">{mastered.length}</span> Gemeistert</div>
+                    <div className="lstat"><span className="lstat-num">{me?.streak ?? 0}</span> Tage Serie</div>
+                  </div>
+                  {topStruggle && (
+                    <p className="learn-struggle">
+                      Du sammelst oft Korrekturen zu <strong>{topStruggle[0]}</strong> ({topStruggle[1]}).
+                    </p>
+                  )}
                 </div>
-              ))}
 
-              {mastered.length > 0 && (
-                <details className="mastered">
-                  <summary>Gemeistert ({mastered.length})</summary>
-                  <ul className="corr-list">
-                    {mastered.map((f) => (
-                      <FavItem key={favKey(f)} f={f} onToggle={toggleFav} />
-                    ))}
-                  </ul>
-                </details>
+                {groups.map((g) => (
+                  <div key={g.t} className="panel learn-group">
+                    <div className="brief-label">{GROUP_LABEL[g.t]} ({g.items.length})</div>
+                    <ul className="corr-list">
+                      {g.items.map((f) => (
+                        <FavItem key={favKey(f)} f={f} onReview={markReviewed} onToggle={toggleFav} />
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+
+                {mastered.length > 0 && (
+                  <details className="mastered">
+                    <summary>Gemeistert ({mastered.length})</summary>
+                    <ul className="corr-list">
+                      {mastered.map((f) => (
+                        <FavItem key={favKey(f)} f={f} onToggle={toggleFav} />
+                      ))}
+                    </ul>
+                  </details>
+                )}
+                </>
               )}
             </>
           )}
