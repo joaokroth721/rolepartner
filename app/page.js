@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
+import posthog from "posthog-js";
 import { scenarios } from "./scenarios";
 import { texts } from "./texts";
 import { splitSentences, tokenize, isWord, glossKey } from "./tokenize.mjs";
@@ -31,6 +32,9 @@ function AuthButton() {
         // NextAuth clears its own cookie; rp_uid is ours to drop, or the next person on
         // this machine inherits the session's identity.
         await fetch("/api/me", { method: "DELETE" }).catch(() => {});
+        // Without this the next person on a shared machine inherits the previous
+        // distinct_id, the same problem the rp_uid delete above solves.
+        posthog.reset();
         signOut();
       }}
     >
@@ -364,6 +368,12 @@ function TextReader({ text, favKeys, onToggleFav, onBack }) {
     setSelSent(-1);
     setSelId(id);
     const g = text.glossary[glossKey(tok)] || (text.words && text.words[glossKey(tok)]);
+    posthog.capture("word_looked_up", {
+      text_id: text.id,
+      kind: "word",
+      in_glossary: Boolean(g),
+      word: tok,
+    });
     if (g) { setSel({ kind: "word", surface: tok, de: g.lemma, pos: g.pos, en: g.en }); return; }
     setSel({ kind: "word", surface: tok, de: tok, en: "", loading: true });
     try {
@@ -380,6 +390,7 @@ function TextReader({ text, favKeys, onToggleFav, onBack }) {
     setSelId(null);
     setSelSent(gi);
     const st = text.sentences && text.sentences[s];
+    posthog.capture("word_looked_up", { text_id: text.id, kind: "sentence", in_glossary: Boolean(st) });
     if (st) { setSel({ kind: "sentence", surface: s, de: s, en: st }); return; }
     setSel({ kind: "sentence", surface: s, de: s, en: "", loading: true });
     try {
@@ -509,6 +520,42 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const recRef = useRef(null);
+  const chatStartedAt = useRef(null);
+
+  // One name for the screen, shared by the UI, the analytics and the docs.
+  const screen = openText
+    ? "reading"
+    : scenario
+    ? stage === "chat"
+      ? "conversation"
+      : stage === "leaderboard"
+      ? "leaderboard"
+      : stage === "feedback"
+      ? "evaluation"
+      : "intro"
+    : tab === "texts"
+    ? "texts"
+    : tab === "feedback"
+    ? "feedback"
+    : "home";
+
+  // Tie the analytics identity to the account once there is one, using the server's
+  // pseudonymous id rather than anything that identifies the person.
+  useEffect(() => {
+    if (me?.analyticsId) posthog.identify(me.analyticsId);
+  }, [me?.analyticsId]);
+
+  // The app is a single route, so a pageview says almost nothing. This is the real
+  // navigation signal, and registering the screen makes every later event (including
+  // autocapture clicks and $pageleave) carry where it happened.
+  useEffect(() => {
+    posthog.register({ app_screen: screen });
+    posthog.capture("screen_viewed", {
+      screen,
+      scenario_id: scenario?.id ?? null,
+      text_id: openText?.id ?? null,
+    });
+  }, [screen, scenario?.id, openText?.id]);
 
   // Who am I (anonymous id on first visit, Google account once login is configured) and
   // what have I saved. Both come from D1; nothing is kept in the browser any more.
@@ -544,6 +591,11 @@ export default function Home() {
     try {
       if (has) await delJSON(`/api/favorites?key=${encodeURIComponent(key)}`);
       else await postJSON("/api/favorites", { ...item, scenario: scenario?.title });
+      posthog.capture("favorite_toggled", {
+        fav_type: item.type || "correction",
+        action: has ? "removed" : "added",
+        scenario_id: scenario?.id ?? null,
+      });
     } catch (e) {
       setFavorites(before);
       setError("Favorit nicht gespeichert: " + e.message);
@@ -556,7 +608,12 @@ export default function Home() {
     const before = favorites;
     setFavorites(favorites.map((f) => (favKey(f) === key ? { ...f, reviews: (f.reviews || 0) + 1 } : f)));
     try {
-      await postJSON("/api/favorites/review", { key });
+      const res = await postJSON("/api/favorites/review", { key });
+      posthog.capture("review_marked", {
+        fav_type: item.type || "correction",
+        reviews: res.reviews,
+        mastered: Boolean(res.mastered),
+      });
     } catch (e) {
       setFavorites(before);
       setError("Fortschritt nicht gespeichert: " + e.message);
@@ -564,6 +621,13 @@ export default function Home() {
   }
 
   function open(s) {
+    posthog.capture("scenario_opened", {
+      scenario_id: s.id,
+      scenario_title: s.title,
+      level: s.level,
+      category: s.category,
+      locked: Boolean(s.locked),
+    });
     setScenario(s);
     setStage("intro");
     setShowEn(false);
@@ -574,11 +638,26 @@ export default function Home() {
   }
 
   function back() {
+    if (stage === "chat" && messages.length > 0) {
+      posthog.capture("conversation_ended", {
+        scenario_id: scenario?.id,
+        reason: "abandoned",
+        user_turns: messages.filter((m) => m.role === "user").length,
+        assistant_turns: messages.filter((m) => m.role === "assistant").length,
+        duration_ms: chatStartedAt.current ? Date.now() - chatStartedAt.current : null,
+      });
+    }
     recRef.current?.abort?.();
     speechSynthesis.cancel();
     setScenario(null);
     setListening(false);
     setBusy(false);
+  }
+
+  function startConversation() {
+    chatStartedAt.current = Date.now();
+    posthog.capture("conversation_started", { scenario_id: scenario.id, level: scenario.level });
+    setStage("chat");
   }
 
   function speak(text) {
@@ -607,6 +686,14 @@ export default function Home() {
     speechSynthesis.cancel();
     setBusy(true);
     setError("");
+    const turns = {
+      user_turns: messages.filter((m) => m.role === "user").length,
+      assistant_turns: messages.filter((m) => m.role === "assistant").length,
+      duration_ms: chatStartedAt.current ? Date.now() - chatStartedAt.current : null,
+    };
+    // Captured before the request, so a conversation someone finished still counts as
+    // finished even when the scoring call fails.
+    posthog.capture("conversation_ended", { scenario_id: scenario.id, reason: "finished", ...turns });
     try {
       // The server scores the conversation, stores it, and returns the board with it:
       // the client never sends a score, so it cannot invent one.
@@ -615,8 +702,19 @@ export default function Home() {
       setBoard(res.board);
       if (res.streak != null) setMe((m) => (m ? { ...m, streak: res.streak } : m));
       setStage("leaderboard");
+      const b = res.evaluation?.breakdown || {};
+      posthog.capture("conversation_scored", {
+        scenario_id: scenario.id,
+        score: res.score,
+        score_band: scoreClass(res.score),
+        grammar: b.grammar ?? null,
+        vocabulary: b.vocabulary ?? null,
+        goal_reached: Boolean(res.evaluation?.goalReached),
+        user_turns: turns.user_turns,
+      });
     } catch (e) {
       setError("Feedback fehlgeschlagen: " + e.message);
+      posthog.capture("conversation_ended", { scenario_id: scenario.id, reason: "failed", ...turns });
     } finally {
       setBusy(false);
     }
@@ -641,6 +739,11 @@ export default function Home() {
     setError("");
     setListening(true);
     rec.start();
+  }
+
+  function openReading(t) {
+    posthog.capture("text_opened", { text_id: t.id, text_title: t.title, level: t.level });
+    setOpenText(t);
   }
 
   // Nav from anywhere: switch tab and close any open scenario or text.
@@ -795,7 +898,7 @@ export default function Home() {
                 return (
                   <>
                     {hero && (
-                      <button className="hero" onClick={() => setOpenText(hero)}>
+                      <button className="hero" onClick={() => openReading(hero)}>
                         <div className="hero-media">
                           <img src={hero.photo} alt="" />
                         </div>
@@ -813,7 +916,7 @@ export default function Home() {
                     <h2 className="section">Texte</h2>
                     <div className="rows">
                       {texts.map((t) => (
-                        <button key={t.id} className="row" onClick={() => setOpenText(t)}>
+                        <button key={t.id} className="row" onClick={() => openReading(t)}>
                           <div className="row-thumb">
                             <img src={t.photo} alt="" />
                           </div>
@@ -977,7 +1080,7 @@ export default function Home() {
           )}
 
           <div className="btn-row">
-            <button className="btn btn-primary" onClick={() => setStage("chat")}>
+            <button className="btn btn-primary" onClick={startConversation}>
               Los geht's
             </button>
           </div>

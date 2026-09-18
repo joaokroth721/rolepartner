@@ -1,4 +1,4 @@
-import { getDb, resolveUser, json, oops, currentStreak, clearedCookie } from "../../db";
+import { getDb, resolveUser, json, oops, currentStreak, clearedCookie, analyticsId } from "../../db";
 
 // Bootstrap call: identifies the browser (minting the anonymous id on first visit),
 // and returns what the topbar needs. The streak is measured, not hardcoded.
@@ -15,6 +15,8 @@ export async function GET(req) {
         name: user.name || null,
         anonymous: !user.email,
         streak,
+        // Pseudonymous and only for signed-in users; null today, since login is not configured.
+        analyticsId: await analyticsId(user),
       },
       { setCookie, clearCookie }
     );

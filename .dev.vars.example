@@ -9,9 +9,15 @@ AUTH_SECRET=
 # Domínio público do app. Em produção: https://<worker>.<subdominio>.workers.dev
 AUTH_URL=http://localhost:8787
 
-# Em produção estas quatro viram secrets do Worker, não arquivo:
+# Sal para o id pseudônimo de analytics (opcional; sem ele, analyticsId fica null).
+#   openssl rand -hex 16
+ANALYTICS_SALT=
+
+# Em produção estas viram secrets do Worker, não arquivo:
 #   npx wrangler secret put OPENAI_API_KEY
 #   npx wrangler secret put GOOGLE_CLIENT_ID
 #   npx wrangler secret put GOOGLE_CLIENT_SECRET
 #   npx wrangler secret put AUTH_SECRET
+#   npx wrangler secret put ANALYTICS_SALT
+# Atenção: NEXT_PUBLIC_POSTHOG_KEY NÃO entra aqui. É embutida no build, não no runtime.
 # E AUTH_URL entra como var normal no wrangler.jsonc ("vars") ou como secret.

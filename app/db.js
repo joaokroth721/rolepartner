@@ -124,6 +124,25 @@ export function oops(where, e) {
   return Response.json({ error: "Serverfehler. Bitte später erneut versuchen." }, { status: 500 });
 }
 
+/**
+ * A stable, pseudonymous id for analytics.
+ *
+ * Never the user id itself: that is the value of the rp_uid cookie, and handing it to page
+ * JavaScript would undo the cookie's HttpOnly flag. The salt makes the hash unguessable from
+ * a known user id, so it cannot be replayed as a cookie either. Null until a salt is set,
+ * and only ever issued to a signed-in user.
+ */
+export async function analyticsId(user) {
+  const salt = process.env.ANALYTICS_SALT;
+  if (!user?.email || !salt) return null;
+  const bytes = new TextEncoder().encode(`${user.id}:${salt}`);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .slice(0, 32);
+}
+
 // Consecutive days with a finished conversation, counting back from today (yesterday still
 // counts, so the streak does not break until a full day is missed).
 export async function currentStreak(db, userId) {
