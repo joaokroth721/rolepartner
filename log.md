@@ -616,3 +616,60 @@ also replaces the robotic voice flagged at `page.js:607`; Tier 2 photoreal strea
 (HeyGen/Tavus/D-ID), rejected as overkill for a practice tool; Tier 3 pre-rendered video per
 reply, rejected as too slow for live chat. Open gate before building: leave the free browser
 voice for paid TTS or not - that is the Tier 0 to Tier 1 line.
+
+---
+
+## Talking illustration: Tier 0 shipped for "Fahrkarte kaufen"
+
+`c1f57ef` - the wiring for the art drawn in `30b23ca`. Only Tier 0 of `plan_video.md`,
+and only the one scenario.
+
+**What it is.** A new optional scenario field carries the art and the mouth anchor:
+
+    partner: { art: "/partners/fahrkarte.svg", mouth: { x: 50, y: 59, w: 7 } }
+
+`PartnerStage` in `app/page.js` renders the image and, over it, a `<span>` mouth placed from
+those percentages. The numbers live with the scenario rather than in the component, so the
+next illustration is a mouthless drawing plus three numbers, with no code change. The field
+is optional and the component returns `null` without it: on a phone the coaching screen is
+pixel-for-pixel what it was, no placeholder and no reserved space. That fallback matters
+more than the feature right now, since two scenarios are locked and coaching has no art.
+
+**Why the mouth is CSS and not state.** The obvious version flips React state on an interval
+to redraw the mouth. It would run a render loop on a phone for the whole reply. Instead the
+speaking state changes exactly twice per utterance (`onstart` / `onend`), toggles one class,
+and a `@keyframes` on a transform does the rest on the compositor. The movement therefore
+costs nothing while it runs, and `@media (prefers-reduced-motion: reduce)` drops both
+animations while keeping the illustration.
+
+**Why it follows the utterance and not a guess.** `speak()` sets `onstart`, `onend` and
+`onerror` on the utterance it creates, so the mouth starts when the OS voice really starts.
+Browsers disagree on what `speechSynthesis.cancel()` fires (Chrome fires `end`, the spec
+says `error`), and a cancel can hit a voice that never started, in which case neither fires
+and the mouth would keep flapping after the user left. So every exit now goes through a
+`stopSpeaking()` that cancels *and* clears the state: `back()`, `navTo()` and
+`endConversation()`. Verified with a stub whose `cancel()` fires nothing at all, the worst
+case: the mouth still stopped.
+
+**Decorative, not labelled.** `aria-hidden` on the figure, empty `alt` on the image, matching
+every other `<img>` in the app. It repeats what the transcript already says; announcing a
+drawing on every turn would be noise, and the speaking state is audible by definition.
+
+**Measured, not assumed.** Playwright against `next dev`, with a speech stub driving
+`onstart`/`onend`, at 390x844 and 1280x900:
+
+- the mouth lands at exactly 50% / 59% of the art box, 22x4 px closed at phone size,
+  and the `mouthTalk` keyframe is live only while speaking (sampled 21x9 mid-animation)
+- the speaking class is 1 while the voice runs, 0 after `onend`, 0 after `Zurück`
+- `Sprechen` / `Gespräch beenden` sit at y=554 in an 844 px viewport, so the art does not
+  push the controls below the fold; the transcript and the star buttons are untouched
+- the coaching scenario renders zero `.partner` nodes with both controls and both bubbles
+- with `prefers-reduced-motion: reduce`: art visible, both animations `none`, mouth closed
+
+The art is 320 px wide on a phone and 400 px (its drawn size) from 700 px up; capping the
+height as well (`min(400px, 46vh)`) is what keeps a short laptop window from hiding the
+buttons.
+
+**Not done here.** No TTS change, so the mouth is still unsynced to the words - that is the
+Tier 0 bargain and the gate to Tier 1 is still the paid-voice decision. Coaching has no art
+and the two locked scenarios have none either.
