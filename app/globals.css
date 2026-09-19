@@ -356,6 +356,54 @@ h1.title {
 .bubble.assistant { align-self: flex-start; background: var(--surface-2); border-bottom-left-radius: 4px; }
 .bubble.user { align-self: flex-end; background: var(--user-bubble); border-bottom-right-radius: 4px; }
 
+/* ---- Talking partner (conversation screen) ---- */
+/* Height is capped, not only width: on a phone the Sprechen / Gespräch beenden buttons sit
+   right under the picture and must stay above the fold. */
+.partner {
+  position: relative;
+  width: 100%;
+  max-width: min(320px, 46vh);
+  aspect-ratio: 4 / 3;
+  margin: 14px auto 4px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+/* Wider screens have the room for the art at its drawn size. */
+@media (min-width: 700px) { .partner { max-width: min(400px, 46vh); } }
+.partner-art { display: block; width: 100%; height: 100%; object-fit: contain; }
+/* The art is drawn with no mouth; this is it. Position comes from the scenario (percent of
+   the art's box), the height from the aspect ratio, so one rule fits every illustration. */
+.partner-mouth {
+  position: absolute;
+  aspect-ratio: 5 / 1;
+  border-radius: 999px;
+  background: #7f1d1d;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+}
+/* Pure CSS while the voice runs: a keyframe on a transform costs nothing on a phone, where
+   re-rendering React several times a second to flap a mouth would. */
+.partner.speaking .partner-mouth { animation: mouthTalk 0.42s ease-in-out infinite; }
+.partner.speaking { animation: partnerPulse 1.8s ease-in-out infinite; }
+
+@keyframes mouthTalk {
+  0%   { transform: translate(-50%, -50%) scale(1, 1); }
+  25%  { transform: translate(-50%, -50%) scale(0.88, 3.6); }
+  50%  { transform: translate(-50%, -50%) scale(1, 1.6); }
+  75%  { transform: translate(-50%, -50%) scale(0.92, 2.6); }
+  100% { transform: translate(-50%, -50%) scale(1, 1); }
+}
+@keyframes partnerPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.015); }
+}
+
+/* Keep the illustration, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .partner.speaking, .partner.speaking .partner-mouth { animation: none; }
+}
+
 /* ---- Evaluation (feedback screen) ---- */
 :root { --good: #16a34a; --ok: #2563eb; --low: #d97706; }
 .eval { display: flex; flex-direction: column; gap: 14px; }

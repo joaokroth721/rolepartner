@@ -115,6 +115,23 @@ function StarButton({ active, onClick }) {
   );
 }
 
+// The talking partner on the conversation screen (plan_video.md, Tier 0). The art is a flat
+// SVG drawn without a mouth; the mouth is this overlay, placed from the scenario's percent
+// anchor, so one component serves every illustration. Scenarios without `partner` render
+// nothing here — two of them are locked and one has no art yet.
+// Decorative on purpose: it carries no information the transcript does not already say, so
+// it is hidden from assistive tech rather than announcing a drawing on every turn.
+function PartnerStage({ partner, speaking }) {
+  if (!partner?.art) return null;
+  const { x = 50, y = 50, w = 7 } = partner.mouth || {};
+  return (
+    <div className={`partner ${speaking ? "speaking" : ""}`} aria-hidden="true">
+      <img className="partner-art" src={partner.art} alt="" />
+      <span className="partner-mouth" style={{ left: `${x}%`, top: `${y}%`, width: `${w}%` }} />
+    </div>
+  );
+}
+
 function Evaluation({ ev, favorites = [], onToggleFav }) {
   const favKeys = new Set(favorites.map(favKey));
   return (
@@ -627,6 +644,7 @@ export default function Home() {
   const [me, setMe] = useState(null); // { id, email, anonymous, streak } from /api/me
   const [favorites, setFavorites] = useState([]); // favorited items, loaded from D1
   const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false); // partner voice running; drives the mouth
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const recRef = useRef(null);
@@ -820,7 +838,7 @@ export default function Home() {
       });
     }
     recRef.current?.abort?.();
-    speechSynthesis.cancel();
+    stopSpeaking();
     setScenario(null);
     setListening(false);
     setBusy(false);
@@ -835,7 +853,20 @@ export default function Home() {
   function speak(text) {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "de-DE";
+    // The mouth follows the utterance's own lifecycle, not a timer: only these events know
+    // when the OS voice really starts and stops. Browsers disagree on what a cancel() fires
+    // (end in Chrome, error elsewhere), so both close the mouth.
+    u.onstart = () => setSpeaking(true);
+    u.onend = () => setSpeaking(false);
+    u.onerror = () => setSpeaking(false);
     speechSynthesis.speak(u);
+  }
+
+  // Every exit from the conversation goes through here: relying on the utterance events
+  // alone would leave the mouth moving if a cancel() silences a voice that never started.
+  function stopSpeaking() {
+    speechSynthesis.cancel();
+    setSpeaking(false);
   }
 
   async function send(userText) {
@@ -855,7 +886,7 @@ export default function Home() {
 
   async function endConversation() {
     recRef.current?.abort?.();
-    speechSynthesis.cancel();
+    stopSpeaking();
     setBusy(true);
     setError("");
     const turns = {
@@ -927,7 +958,7 @@ export default function Home() {
     setTab(t);
     setOpenText(null);
     setOpenSession(null);
-    speechSynthesis.cancel();
+    stopSpeaking();
     if (scenario) back();
   };
 
@@ -1317,6 +1348,7 @@ export default function Home() {
       {stage === "chat" && (
         <>
           <p className="subtitle">{scenario.desc}</p>
+          <PartnerStage partner={scenario.partner} speaking={speaking} />
           <div className="btn-row">
             <button className="btn btn-primary" onClick={listen} disabled={listening || busy}>
               {listening ? "Höre zu…" : busy ? "…" : "Sprechen"}

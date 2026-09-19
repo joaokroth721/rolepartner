@@ -7,6 +7,11 @@ export const scenarios = [
     level: "A2",
     featured: true,
     photo: "https://images.unsplash.com/photo-1775114545176-23a9801c8b9c?w=600&q=70",
+    // Talking partner on the conversation screen (plan_video.md, Tier 0). The art is drawn
+    // without a mouth; `mouth` says where the animated one belongs, in percent of the art's
+    // box, so the anchor travels with the scenario instead of living in the component.
+    // Optional: a scenario without `partner` shows no illustration at all.
+    partner: { art: "/partners/fahrkarte.svg", mouth: { x: 50, y: 59, w: 7 } },
 
     title: "Fahrkarte kaufen",
     desc: "Kauf am Bahnhofsschalter eine Zugfahrkarte.",
