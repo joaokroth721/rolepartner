@@ -310,3 +310,125 @@ degrade cleanly because the history and session screens "just omit the bar they 
 recognize". Nobody has watched that happen - `sessions` is empty until `OPENAI_API_KEY` is
 set, so it cannot have been exercised. It is a reading of the code, not an observation. If
 it is wrong, the failure only appears once real rows exist and a user opens an old one.
+
+---
+
+## Admin page
+
+A dashboard for the owner at `/admin`, plus the recording the app was not doing that it
+needs. Five tabs: Overview, Tokens, Users, Challenges, Conversations.
+
+### Its own route, not a sixth screen of `page.js`
+
+The learner app is one page of state-driven screens on purpose and CLAUDE.md names them.
+The admin page is a separate route anyway, for two reasons: it shares none of that state,
+and every table on it reads across all users, so keeping it apart means none of that code
+or data ships in the bundle a learner downloads. Its copy is English while the app is
+German - it is an internal tool, and the methodology it reports (the examiner prompt, the
+schema, the scoring rules) is English already, so translating the labels around it would
+only have added a second vocabulary to keep in sync.
+
+### Access
+
+Email only, and only a Google-verified one (`app/admin.js`). The `rp_uid` cookie
+identifies a browser and proves nothing, so an anonymous visitor can never clear the gate
+whatever they send. `ADMIN_EMAILS` (comma separated) bootstraps the list, because the
+`admins` table starts empty and the UI that fills it is itself behind the gate - without a
+way in from outside the database the first admin could never exist. Those addresses cannot
+be removed through the UI, which makes them the recovery path if the table is emptied, and
+you cannot remove yourself, which is the other way a one-admin app locks itself out.
+
+`requireAdmin` deliberately does not call `resolveUser`: that mints a row in `users` and an
+identity cookie on first contact, so a stranger probing `/api/admin` would otherwise leave
+a user record behind. Verified against the local worker: three unauthenticated probes
+returned 401 with no `set-cookie` and created no rows.
+
+### What it can now measure, and from when
+
+Three things were not being recorded at all, so three tables were added (`0003_admin.sql`):
+
+- `visits` - one row per user per day, incremented by `/api/me`, which the app calls once
+  per page load. `users.last_seen_at` could already say *who* was here last; only this can
+  say *how many times*, or how many people were here in a month that has since passed.
+- `ai_tokens` - `(user, day, route, model)` with calls and input/output/reasoning tokens.
+  `ai_usage` counts calls, and a one-word `/api/translate` call and a whole-transcript
+  `/api/feedback` call are both "1" there while differing by two orders of magnitude in
+  cost, so it could never answer "what am I spending".
+- `admins` - the allow list.
+
+All three aggregate rather than storing one row per event, so they stay small.
+
+**These start at zero.** Nothing before this commit was counted, so the first weeks of
+history simply do not exist. `users.created_at` is the only number here that reaches back.
+
+Cost is an **estimate**, never a bill: the provider does not report prices over the API, so
+the rate card is hardcoded in `app/ai.js` ($0.05 / $0.40 per 1M in/out for gpt-5-nano,
+checked 19.09.2026) and goes stale the day prices change. A model with no entry makes the
+total `n/a` rather than a number that silently omits it - the seeded test data included an
+unpriced model specifically to watch that happen, and it did.
+
+### Prompts and methodology are the real ones
+
+`chatSystem` and `evalSystem` moved out of their routes into `app/prompts.js`, and the
+eval JSON schema with them. The admin page calls the same functions the routes call, so it
+cannot show a prompt the app does not send. A page that rebuilt the prompt from the same
+scenario fields would have looked identical and drifted the first time a route changed a
+line. Same reasoning for `SCORING_RULES` and `MATCHING_RULES`, which live in
+`app/scoring.js` beside the arithmetic they describe, and for the schema field
+descriptions, which are the rubric the examiner model is handed, quoted rather than
+paraphrased.
+
+The model id also moved to `app/ai.js`. It was typed out in three routes, and
+`ai_tokens.model` records which model spent the tokens - a recorded model that can drift
+from the one called is worse than no record.
+
+### Conversations are other people's
+
+The Conversations tab shows any user's transcript and the examiner's raw output. This is
+the one feature here that is a real privacy step: those conversations are stored so the
+learner can review their own history, and an admin reading them is a new thing. The tab
+says so on the page. If that is not wanted, deleting the `conversations` branch of
+`app/api/admin/route.js` and the tab removes it and leaves the rest working.
+
+### Measured, not assumed
+
+- All 13 SQL statements in `app/adminreport.js` were extracted from the source and run
+  against a seeded local D1 - not retyped, so a query that only exists in a test cannot
+  pass while the real one is broken. All 13 returned correct values.
+- The three write statements (`visits` upsert, `ai_tokens` upsert, admin insert/delete)
+  were exercised the same way: two `recordVisit` calls took hits 5 -> 7, two `recordUsage`
+  calls accumulated 12 -> 14 calls and 9000 -> 9222 input tokens, and `INSERT OR IGNORE`
+  kept the original `added_by` on a duplicate add.
+- Against the local worker, with the Google session stubbed out for the test and the stub
+  removed afterwards: 401 on all four endpoints when signed out, 403 on all four for a
+  signed-in address that is not on the list (and the page shows "No access" rather than an
+  error), 200 for an address in the `admins` table but *not* in `ADMIN_EMAILS`, so both
+  halves of the allow list were exercised. Also: 400 for a malformed email, 400 for
+  removing yourself, 400 for removing an `ADMIN_EMAILS` address, 403 for a cross-site
+  POST, 404 for a missing conversation, and an unknown `scenarioId` filter ignored rather
+  than passed to SQL. An address is lowercased on the way in, and a duplicate add is a
+  no-op rather than an error.
+- Every tab was screenshotted. Three things that only a screenshot catches were fixed: the
+  learner topbar pins `.brand` absolutely and it overlapped five nav pills, a right-aligned
+  number column had no gap before the next text column ("TOKENSFIRST SEEN"), and the 900px
+  learner column was too narrow for a seven-column table.
+- `scoring`, `history` and `texts` self-tests still pass.
+
+### Charts
+
+Single measure, single hue, one axis, values on hover with the peak named in the header
+rather than a number over every bar, and a day with no traffic drawing no bar above the
+baseline. Fourteen days, which is what fits without squinting and costs at most one row
+per active user per day to read.
+
+### Still open
+
+- `ADMIN_EMAILS` is not set anywhere yet. Until it is, and until Google login is
+  configured, nobody can open `/admin` - the gate works, there is simply no one on the
+  list. Both are account setup, not code.
+- `0003_admin.sql` has been applied locally only. Production needs
+  `npx wrangler d1 migrations apply rolepartner --remote`. Until it is, `/api/me` logs a
+  `recordVisit` failure per request and keeps working: the counters are wrapped so a
+  missing table cannot break the bootstrap call every screen waits on.
+- The user list runs three correlated subqueries per row. Right at this size, wrong at a
+  hundred thousand users.

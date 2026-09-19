@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
 import posthog from "posthog-js";
 import { scenarios } from "./scenarios";
@@ -948,6 +949,13 @@ export default function Home() {
           </button>
         </nav>
         <div className="topbar-right">
+          {/* Only shown to an admin, and only as a shortcut: /admin and /api/admin both
+              re-check the allow list server-side, so a forged flag here opens nothing. */}
+          {me?.admin && (
+            <Link className="nav-item" href="/admin">
+              Admin
+            </Link>
+          )}
           <span className="streak" title="Serie">{me?.streak ?? 0} Tage</span>
           <AuthButton />
         </div>

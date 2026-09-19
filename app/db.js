@@ -143,6 +143,32 @@ export async function analyticsId(user) {
     .slice(0, 32);
 }
 
+/**
+ * Counts one page open for this user, on today's date (UTC).
+ *
+ * Called from /api/me, which the app fires once per page load, so this is a visit
+ * counter and not a request counter. `users.last_seen_at` already says when someone was
+ * last here; only this can say how many times, or how many people were here in a month
+ * that has since passed.
+ *
+ * Never throws, for the same reason recordUsage does not: a counter must not be able to
+ * break the bootstrap call that every screen waits on.
+ */
+export async function recordVisit(db, userId) {
+  try {
+    const day = new Date().toISOString().slice(0, 10);
+    await db
+      .prepare(
+        `INSERT INTO visits (user_id, day, hits) VALUES (?, ?, 1)
+         ON CONFLICT (user_id, day) DO UPDATE SET hits = hits + 1`
+      )
+      .bind(userId, day)
+      .run();
+  } catch (e) {
+    console.error("[recordVisit]", e?.stack || e);
+  }
+}
+
 // Consecutive days with a finished conversation, counting back from today (yesterday still
 // counts, so the streak does not break until a full day is missed).
 export async function currentStreak(db, userId) {

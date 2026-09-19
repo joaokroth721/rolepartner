@@ -1,4 +1,5 @@
-import { getDb, resolveUser, json, oops, currentStreak, clearedCookie, analyticsId } from "../../db";
+import { getDb, resolveUser, json, oops, currentStreak, clearedCookie, analyticsId, recordVisit } from "../../db";
+import { isAdminEmail } from "../../admin";
 
 // Bootstrap call: identifies the browser (minting the anonymous id on first visit),
 // and returns what the topbar needs. The streak is measured, not hardcoded.
@@ -8,6 +9,9 @@ export async function GET(req) {
   try {
     const db = await getDb();
     const { user, setCookie, clearCookie } = await resolveUser(db, req);
+    // This route is the app's bootstrap call, one per page load, which makes it the only
+    // honest place to count a visit.
+    await recordVisit(db, user.id);
     const streak = await currentStreak(db, user.id);
     return json(
       {
@@ -17,6 +21,9 @@ export async function GET(req) {
         streak,
         // Pseudonymous and only for signed-in users; null today, since login is not configured.
         analyticsId: await analyticsId(user),
+        // Only decides whether the topbar offers the Admin link. /api/admin re-checks it
+        // server-side on every call, so a forged `true` here buys nothing.
+        admin: await isAdminEmail(db, user.email),
       },
       { setCookie, clearCookie }
     );

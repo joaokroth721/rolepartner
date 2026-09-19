@@ -601,3 +601,125 @@ h1.title {
   60% { opacity: 1; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent); }
   100% { opacity: 1; transform: none; box-shadow: 0 0 0 0 transparent; }
 }
+
+/* ---- Admin dashboard (/admin) ---- */
+/* Its own block, and every class is prefixed `a-`, so nothing here can reach the learner
+   app by accident. Shared pieces (.panel, .btn, .chat, .brief-label) are reused as they are. */
+
+/* The learner topbar pins .brand to the viewport edge and lets it overlap the nav below
+   ~1000px. The admin bar carries five tabs and a link, so it lays all three parts out in
+   one flex row and wraps instead of overlapping. */
+.a-topbar {
+  max-width: 1200px; margin: 0 auto; padding: 14px 24px;
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+}
+.a-topbar .brand { position: static; transform: none; }
+.a-topbar .nav { flex-wrap: wrap; }
+.a-back { margin-left: auto; }
+
+/* Wider than the learner app: these tables have seven columns, not two. */
+.a-main { max-width: 1200px; }
+
+.a-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.a-stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px;
+}
+.a-stat-num { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.a-stat-label { color: var(--muted); font-size: 13px; font-weight: 600; margin-top: 6px; }
+.a-stat-sub { color: var(--muted); font-size: 12px; margin-top: 2px; opacity: 0.85; }
+
+/* Charts: one measure, one hue, one axis. The value of each day is on hover, and the
+   highest is named in the header, rather than a number printed over every bar. */
+.a-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.a-chart {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px;
+}
+.a-chart-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.a-chart-head .brief-label { margin: 0; }
+.a-chart-peak { color: var(--muted); font-size: 12px; font-weight: 600; }
+.a-chart-plot {
+  display: flex; align-items: flex-end; gap: 2px;
+  height: 92px; margin-top: 14px;
+  border-bottom: 1px solid var(--border); /* the baseline: a day with no traffic draws no bar */
+}
+.a-chart-col { position: relative; flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.a-chart-bar { width: 100%; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 0; }
+.a-chart-col:hover .a-chart-bar { background: var(--accent-hover); }
+.a-chart-tip {
+  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+  margin-bottom: 6px; white-space: nowrap; pointer-events: none; opacity: 0;
+  background: var(--text); color: var(--surface);
+  font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 6px;
+  transition: opacity 0.12s;
+}
+.a-chart-col:hover .a-chart-tip { opacity: 1; }
+.a-chart-axis { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; margin-top: 6px; }
+
+.a-table-wrap { overflow-x: auto; }
+.a-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.a-table th, .a-table td { text-align: left; padding: 9px 16px 9px 0; vertical-align: top; }
+.a-table th:first-child, .a-table td:first-child { padding-left: 0; }
+.a-table th:last-child, .a-table td:last-child { padding-right: 0; }
+.a-table th {
+  color: var(--muted); font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.a-table td { border-bottom: 1px solid var(--border); }
+.a-table tr:last-child td { border-bottom: 0; }
+.a-table .num { text-align: right; padding-left: 16px; font-variant-numeric: tabular-nums; }
+.a-table .btn { padding: 4px 12px; font-size: 13px; }
+
+.a-empty { color: var(--muted); margin: 8px 0 0; }
+.a-muted { color: var(--muted); }
+.a-note { color: var(--muted); font-size: 13px; line-height: 1.6; margin: 14px 0 0; }
+.a-lead { margin: 0 0 14px; line-height: 1.6; }
+.a-sub { margin-top: 22px; }
+.a-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+  background: var(--surface-2); padding: 2px 6px; border-radius: 5px;
+}
+.a-pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; line-height: 1.6;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; margin: 0; white-space: pre-wrap; word-break: break-word;
+  max-height: 420px; overflow: auto;
+}
+
+.a-add { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+.a-input {
+  flex: 1 1 240px; min-width: 200px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+  color: var(--text); font: inherit; font-size: 15px; padding: 10px 16px;
+}
+.a-input:focus { outline: none; border-color: var(--accent); }
+
+.a-challenge { padding: 0; }
+.a-challenge-head {
+  appearance: none; width: 100%; cursor: pointer; text-align: left; font: inherit; color: inherit;
+  background: none; border: 0; padding: 18px 20px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.a-challenge-head:hover { background: var(--surface-2); border-radius: var(--radius); }
+.a-challenge-title { font-weight: 700; font-size: 17px; }
+.a-challenge-meta { color: var(--muted); font-size: 13px; }
+.a-chevron { margin-left: auto; color: var(--accent); font-weight: 600; font-size: 14px; }
+.a-challenge-body { padding: 0 20px 20px; border-top: 1px solid var(--border); }
+.a-challenge-body .a-sub:first-child { margin-top: 18px; }
+
+.a-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.a-chip {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 999px; padding: 3px 10px; font-size: 13px;
+}
+
+.a-filter { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.a-filter .a-input { flex: 0 1 260px; }
+.a-conv-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 18px 0 0; }

@@ -23,10 +23,10 @@ export const WEIGHTS = {
 
 // Enough target words to count as full marks: hitting 5 of a scenario's vocab and
 // phrase entries is already good use of the briefing, and scenarios differ in size.
-const TARGET_SAMPLE = 5;
+export const TARGET_SAMPLE = 5;
 // Fewer student turns than this cannot prove real interaction, so the interaction score
 // is capped in proportion: a one-line "conversation" can never claim full marks for it.
-const MIN_MEANINGFUL_TURNS = 4;
+export const MIN_MEANINGFUL_TURNS = 4;
 
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 const num = (x) => Number(x) || 0;
@@ -121,3 +121,56 @@ export function computeScore({ scenario, messages = [], judgement = {} }) {
     turns: studentTurns.length,
   };
 }
+
+/**
+ * The same five terms in prose, for the methodology report on /admin.
+ *
+ * Written here rather than in the admin page so a change to a formula and a change to
+ * its explanation are one edit in one file. `formula` is the arithmetic as it is coded
+ * below; if the two ever disagree, the code is what runs and this is the bug.
+ */
+export const SCORING_RULES = [
+  {
+    key: "goal",
+    label: "Goal",
+    source: "model observation (goalCompletion 0-3)",
+    formula: "round(25 * goalCompletion / 3)",
+    why: "Graded, not pass/fail: a near miss keeps most of the weight it earned instead of scoring the same as never trying.",
+  },
+  {
+    key: "tasks",
+    label: "Tasks",
+    source: "model observation (taskResults, one 0-2 per briefing task)",
+    formula: "round(20 * sum(taskResults) / (2 * taskCount)), or the full 20 when the scenario has no tasks",
+    why: "The share of the briefing that actually happened. A scenario that asks for nothing cannot dock points it never offered.",
+  },
+  {
+    key: "grammar",
+    label: "Grammar",
+    source: "model observation (grammar 0-5, rated against A2)",
+    formula: "round(20 * grammar / 5)",
+    why: "The corrections list is already a symptom of this rating, so mistakes are never charged twice.",
+  },
+  {
+    key: "vocabulary",
+    label: "Vocabulary",
+    source: "12 from the model (vocab 0-5), 8 measured from the transcript",
+    formula: `round(12 * vocab / 5) + round(8 * min(hits, pool) / pool), pool = min(${TARGET_SAMPLE}, vocab + phrases)`,
+    why: "The measured half stops a fluent improviser who ignores the briefing from maxing out; the judged half still rewards correct paraphrase that never says the exact lemma.",
+  },
+  {
+    key: "interaction",
+    label: "Interaction",
+    source: "model observation (interaction 0-5), capped by student turns",
+    formula: `round(15 * min(interaction, ceil(5 * turns / ${MIN_MEANINGFUL_TURNS})) / 5)`,
+    why: "Quality gated by sufficiency: a three-line exchange cannot claim full marks for interaction however generous the model was.",
+  },
+];
+
+/** How the raw transcript is turned into the "hits" that the vocabulary term measures. */
+export const MATCHING_RULES = [
+  "Case, punctuation and articles (der/die/das/ein/eine/...) are stripped before comparing.",
+  "A vocab entry counts when every content word of it appears among the student's words.",
+  "A phrase counts when at least 60% of its content words appear, because briefing phrases are templates nobody repeats verbatim.",
+  `Only the first ${TARGET_SAMPLE} hits can be worth anything: the pool is capped so a large scenario is not easier than a small one.`,
+];
