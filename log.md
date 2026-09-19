@@ -250,3 +250,63 @@ Waiting on account setup, not on code:
 Not started: dynamic scenario unlocking (item 10, planned), better voice (item 11),
 and the one item nobody can do from a sandbox - rotating the OpenAI key that was
 sitting in a synced folder.
+
+---
+
+## 19.09.2026
+
+No app code changed. The branch that carried everything was merged into `main`, and two
+claims the log made above are now wrong.
+
+---
+
+## Merged to main
+
+Two fast-forwards, no merge commits:
+
+- `331b801..f90e03d` - the 12 commits from 16-18.09 (Cloudflare, D1, removing the fake,
+  the security review and server-side scoring, the three plans, PostHog, session history,
+  the Worker rename).
+- `f90e03d..93c36b1` - the evaluation rework, committed after the first merge and merged
+  separately.
+
+`main` had no commits of its own since `331b801`, so both merges were `--ff-only` and the
+history stays linear. A merge commit would have recorded nothing a linear history does not
+already say, and no pull request was opened because there was no second opinion to collect
+on work already reviewed in place. `origin/main` and `claude/hopeful-hopper-c8gnva` now
+point at the same commit.
+
+**This does not deploy anything.** There is no CI in the repo - no `.github/workflows` -
+and `wrangler.jsonc` binds a Worker name, not a branch. Production is whatever was last
+pushed by hand with `wrangler deploy`, so `main` being current is a statement about the
+repository and nothing else.
+
+Verified rather than assumed: `node app/scoring.selftest.mjs` passes on the merged tree.
+The graded goal behaves as intended - a near miss scores 92 against 75 for never trying,
+where the old boolean scored both the same.
+
+---
+
+## Corrections to what is written above
+
+- Item 9 ends "Self-test passes. Not committed yet." It was committed, as `93c36b1`, in
+  the same commit that added that sentence.
+- The end-of-day state says "`main` still has none of this work; production runs from
+  `claude/hopeful-hopper-c8gnva`." The first half is no longer true. The second half was
+  never about branches in the way it reads: nothing serves from a branch, it serves from
+  the last manual deploy.
+
+---
+
+## Still open
+
+Unchanged and still waiting on account setup, not code: `OPENAI_API_KEY`, Google login,
+the session replay decision. Still not started: dynamic scenario unlocking, better voice,
+and rotating the OpenAI key that was sitting in a synced folder.
+
+One thing carried forward as unverified rather than done. Item 9 claims old `sessions`
+rows, which carry the previous breakdown shape (`engagement`, `penalty`, `goalReached`),
+degrade cleanly because the history and session screens "just omit the bar they no longer
+recognize". Nobody has watched that happen - `sessions` is empty until `OPENAI_API_KEY` is
+set, so it cannot have been exercised. It is a reading of the code, not an observation. If
+it is wrong, the failure only appears once real rows exist and a user opens an old one.
