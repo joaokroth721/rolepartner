@@ -771,3 +771,27 @@ h1.title {
 .a-filter { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
 .a-filter .a-input { flex: 0 1 260px; }
 .a-conv-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 18px 0 0; }
+
+/* The mission repeated on the conversation screen. Foldable, because the transcript is
+   what that screen is for; the marker is styled like the "Gemeistert" pile's. */
+.goal-recall { margin-top: 4px; }
+.goal-recall > summary {
+  cursor: pointer;
+  list-style: none;
+  align-items: center;
+}
+.goal-recall > summary::-webkit-details-marker { display: none; }
+.goal-recall > summary .brief-label::before {
+  content: "\25B8";
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+.goal-recall[open] > summary .brief-label::before { transform: rotate(90deg); }
+/* The briefing sets the goal at 18px because it is that screen's headline. Here it is a
+   reminder sitting above the transcript, so it drops back to body size and the whole
+   panel stays glanceable instead of pushing the conversation down. */
+.goal-recall .goal-row .vocab-de,
+.goal-recall .goal-row .vocab-en { font-size: 15px; }
+.goal-recall .vocab-list { gap: 6px; }

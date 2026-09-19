@@ -267,6 +267,30 @@ descriptions were reworded to point at that level instead of naming A2 themselve
 The photo is a picsum seed, like the reader's images, because a guessed Unsplash id can
 404 on the hero. Worth swapping for a curated photo.
 
+### The mission, repeated on the conversation screen
+
+The goal and the briefing's tasks now appear during the conversation too, German first
+with the English blurred behind the same Show/Hide English toggle as the briefing. The
+goal is the first thing that slips once the talking starts, and the only way to check it
+was to leave the chat.
+
+One component, `GoalPanel`, now renders it in both places: the briefing's own copy was
+replaced by it rather than a second copy being written, so the two cannot drift.
+
+Two deliberate differences on the conversation screen:
+
+- It sits **after** the controls, so "Sprechen" stays reachable without scrolling.
+- It is a `<details>`, open by default and foldable, and the goal drops from the
+  briefing's 18px headline to body size. Reused verbatim, the panel was tall enough to
+  push the tasks off a 390px screen, which is the opposite of a reminder.
+
+The English toggle inside the `<summary>` calls `preventDefault` and `stopPropagation`,
+or clicking it would also fold the panel away.
+
+Checked in a browser at 390px, both screens: panel present during the conversation,
+4 of 4 English lines blurred by default, none after the toggle with the panel still open,
+folded away on a summary click, and no page errors. The briefing renders as before.
+
 ## State at the end of the day
 
 Deployed and working: Cloudflare Workers, D1, favorites, leaderboard, streak,

@@ -105,6 +105,70 @@ function MedalGoals({ score }) {
   );
 }
 
+// The mission: the goal and the briefing's tasks, German first with the English blurred
+// until asked for. Rendered in the briefing and again during the conversation, because
+// the goal is the first thing that slips once the talking starts and scrolling back to
+// the intro would mean leaving the chat.
+function GoalPanel({ scenario, showEn, onToggleEn, collapsible = false }) {
+  const toggle = (
+    <button
+      className="brief-toggle"
+      onClick={(e) => {
+        // Inside a <summary> this click would also fold the panel away.
+        e.preventDefault();
+        e.stopPropagation();
+        onToggleEn();
+      }}
+    >
+      {showEn ? "Hide English" : "Show English"}
+    </button>
+  );
+
+  const body = (
+    <>
+      <ul className="vocab-list">
+        <li className="goal-row">
+          <span className="vocab-de">{scenario.goal}</span>
+          <span className={`vocab-en ${showEn ? "" : "brief-blur"}`}>{scenario.goalEn}</span>
+        </li>
+      </ul>
+      <div className="brief-label" style={{ marginTop: 16 }}>Üben / Practice</div>
+      <ul className="vocab-list">
+        {scenario.tasks.map((t, i) => (
+          <li key={i}>
+            <span className="vocab-de">{t}</span>
+            <span className={`vocab-en ${showEn ? "" : "brief-blur"}`}>{scenario.tasksEn[i]}</span>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+
+  // During the conversation the transcript is what the screen is for, so the panel can be
+  // folded away; in the briefing there is nothing to get out of the way of.
+  if (collapsible) {
+    return (
+      <details className="panel brief-section goal-recall" open>
+        <summary className="brief-head">
+          <span className="brief-label">Dein Ziel / Goal</span>
+          {toggle}
+        </summary>
+        {body}
+      </details>
+    );
+  }
+
+  return (
+    <div className="panel brief-section">
+      <div className="brief-head">
+        <div className="brief-label">Dein Ziel / Goal</div>
+        {toggle}
+      </div>
+      {body}
+    </div>
+  );
+}
+
 function StarButton({ active, onClick }) {
   return (
     <button className={`star ${active ? "on" : ""}`} onClick={onClick} aria-pressed={active} title="Merken">
@@ -1267,29 +1331,7 @@ export default function Home() {
             {showEn ? scenario.placeEn : scenario.place}
           </p>
 
-          <div className="panel brief-section">
-            <div className="brief-head">
-              <div className="brief-label">Dein Ziel / Goal</div>
-              <button className="brief-toggle" onClick={() => setShowTr((v) => !v)}>
-                {showTr ? "Hide English" : "Show English"}
-              </button>
-            </div>
-            <ul className="vocab-list">
-              <li className="goal-row">
-                <span className="vocab-de">{scenario.goal}</span>
-                <span className={`vocab-en ${showTr ? "" : "brief-blur"}`}>{scenario.goalEn}</span>
-              </li>
-            </ul>
-            <div className="brief-label" style={{ marginTop: 16 }}>Üben / Practice</div>
-            <ul className="vocab-list">
-              {scenario.tasks.map((t, i) => (
-                <li key={i}>
-                  <span className="vocab-de">{t}</span>
-                  <span className={`vocab-en ${showTr ? "" : "brief-blur"}`}>{scenario.tasksEn[i]}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <GoalPanel scenario={scenario} showEn={showTr} onToggleEn={() => setShowTr((v) => !v)} />
 
           {scenario.vocab?.length > 0 && (
             <div className="panel brief-section">
@@ -1359,6 +1401,14 @@ export default function Home() {
           </div>
 
           {error && <p className="error">{error}</p>}
+
+          {/* After the controls, so "Sprechen" stays reachable without scrolling. */}
+          <GoalPanel
+            scenario={scenario}
+            showEn={showTr}
+            onToggleEn={() => setShowTr((v) => !v)}
+            collapsible
+          />
 
           <div className="chat">
             {messages.map((m, i) => {
