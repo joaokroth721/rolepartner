@@ -232,6 +232,41 @@ implements A.
 
 ---
 
+## 19.09.2026
+
+### New challenge: "Erfolgreich scheitern"
+
+A second playable scenario alongside "Fahrkarte kaufen", from the Kursbuch chapter of the
+same name (Modul 4, Lektion 10): Milo Hansen's Institut fuer erfolgreiches Scheitern,
+career setbacks, and the strengths-and-weaknesses discussion round.
+
+The point of it is the chapter's Kommunikation box, "Argumente einschraenken": qualifying
+an argument instead of calling something simply good or bad. Making that unavoidable
+needed no new machinery, only the existing two levers used deliberately:
+
+- The five hedging patterns are the scenario's `phrases`, and `phrases` are what the
+  measured half of the vocabulary score matches against the transcript.
+- Tasks 2 and 3 name the move itself ("Waege eine Eigenschaft ab", "Widersprich Milo
+  hoeflich und schraenke sein Argument ein"), and the examiner grades every task 0-2.
+
+Measured, not assumed: same transcript quality and identical examiner ratings, the hedged
+run scores 91 and the flat one 83, purely from phrase matching. If the examiner also marks
+those two tasks skipped, the flat run drops to 73. So the communication is worth about 18
+points, and `app/scoring.selftest.mjs` now asserts that gap so it cannot regress quietly.
+
+The `einerseits ... andererseits` phrase matches from a natural sentence rather than
+verbatim repetition, which the self-test also pins: phrase matching needs 60 percent of
+the content words, not the whole template.
+
+Level B1, the first non-A2 scenario that is actually playable. That exposed a real
+mismatch: `evalSystem` in `app/prompts.js` hardcoded "a German A2 student" and "against
+the A2 level", so a B1 briefing would have been graded against A2 descriptors and
+flattered. The examiner prompt now takes the level from the scenario, and the schema
+descriptions were reworded to point at that level instead of naming A2 themselves.
+
+The photo is a picsum seed, like the reader's images, because a guessed Unsplash id can
+404 on the hero. Worth swapping for a curated photo.
+
 ## State at the end of the day
 
 Deployed and working: Cloudflare Workers, D1, favorites, leaderboard, streak,

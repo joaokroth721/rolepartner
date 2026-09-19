@@ -40,6 +40,71 @@ Passe dein Niveau leicht an den Nutzer an, aber vereinfache nicht zu sehr.
 Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zum Kauf.`,
   },
   {
+    id: "coaching",
+    category: "Beruf",
+    level: "B1",
+    // picsum, like the reader's images: a seed always resolves, where a guessed Unsplash
+    // id can 404 on the hero. Swap for a curated photo when there is one.
+    photo: "https://picsum.photos/seed/coaching/600/400",
+
+    title: "Erfolgreich scheitern",
+    desc: "Sprich im Coaching über einen Rückschlag und wäge Stärken und Schwächen ab.",
+
+    place: "Du sitzt im Erstgespräch beim Institut für erfolgreiches Scheitern. Der Coach Milo Hansen sitzt dir gegenüber.",
+    placeEn: "You are in a first session at the Institute for Successful Failure. The coach Milo Hansen sits across from you.",
+    goal: "Analysiere einen beruflichen Rückschlag und wäge dabei eine Eigenschaft als Stärke und als Schwäche ab.",
+    goalEn: "Analyse a professional setback, weighing one trait as both a strength and a weakness.",
+    // Tasks 2 and 3 are the point of this challenge: they are what makes the hedging
+    // language unavoidable. The examiner grades each task 0-2, so a one-sided answer
+    // loses real points instead of merely sounding flat.
+    tasks: [
+      "Erzähle, woran du beruflich gescheitert bist",
+      "Wäge eine Eigenschaft ab: einerseits eine Stärke, andererseits eine Schwäche",
+      "Widersprich Milo höflich und schränke sein Argument ein",
+      "Fasse einen Entschluss und nenne ein neues Ziel",
+    ],
+    tasksEn: [
+      "Say what you failed at professionally",
+      "Weigh up one trait: a strength on one hand, a weakness on the other",
+      "Disagree with Milo politely and qualify his argument",
+      "Make a decision and name a new goal",
+    ],
+
+    vocab: [
+      { de: "der Rückschlag", en: "the setback" },
+      { de: "die Niederlage", en: "the defeat" },
+      { de: "das Scheitern", en: "failing, failure" },
+      { de: "die Stärke", en: "the strength" },
+      { de: "die Schwäche", en: "the weakness" },
+      { de: "das Sprungbrett", en: "the springboard" },
+      { de: "einen Entschluss fassen", en: "to make a decision" },
+      { de: "in Schwierigkeiten geraten", en: "to get into difficulties" },
+      { de: "Hilfe leisten", en: "to give help" },
+      { de: "zur Verfügung stellen", en: "to make available" },
+    ],
+    // The "Argumente einschränken" set: qualifying an argument instead of flatly agreeing
+    // or disagreeing. Saying these is what the challenge is for, so they are also the
+    // target phrases the score measures against the transcript.
+    phrases: [
+      { de: "Einerseits ist es positiv, dass …, andererseits ist es problematisch, wenn …", en: "On the one hand it is good that …, on the other hand it is a problem when …" },
+      { de: "Man kann zwar sagen, dass …, allerdings muss man auch bedenken, dass …", en: "You can certainly say that …, however you also have to consider that …" },
+      { de: "Im Prinzip ist es von Vorteil, dass …, trotzdem darf man nicht vergessen, dass …", en: "In principle it is an advantage that …, still you must not forget that …" },
+      { de: "Das stimmt schon, aber so einfach ist das leider nicht.", en: "That is true, but unfortunately it is not that simple." },
+      { de: "Kritisch wird es aber, wenn …", en: "It gets critical though when …" },
+    ],
+
+    system: `Du bist Milo Hansen, Coach im Institut für erfolgreiches Scheitern.
+Der Nutzer übt Deutsch und spricht mit dir über einen beruflichen Rückschlag.
+Bleib immer in der Rolle. Sprich nur Deutsch, in kurzen, natürlichen Sätzen (max. 2 Sätze).
+Du bist warm, direkt und neugierig, aber nie tröstend: Scheitern ist für dich normal und nützlich.
+Vertritt absichtlich einseitige Thesen ("Wer plant, verliert." / "Ehrgeiz ist immer gut."),
+damit der Nutzer widersprechen und einschränken muss.
+Akzeptiere kein pauschales "gut" oder "schlecht": frag dann nach der anderen Seite
+("Und was spricht dagegen?", "Wann wird genau das zum Problem?").
+Wenn der Nutzer eine Eigenschaft nur als Stärke nennt, verlange die Kehrseite.
+Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu einem neuen Ziel.`,
+  },
+  {
     id: "restaurant",
     category: "Essen",
     level: "A2",

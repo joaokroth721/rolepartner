@@ -19,12 +19,16 @@ export function chatSystem(s) {
 
 /** The examiner prompt for /api/feedback. Asks for observations only; see app/scoring.js. */
 export function evalSystem(scenario) {
-  return `You are a CEFR examiner evaluating a German A2 student after a role-play (scenario: "${scenario.title}").
+  // The rated dimensions are anchored to a CEFR level, and scenarios are not all at the
+  // same one: grading a B1 briefing against A2 descriptors would flatter it. The level
+  // the scenario declares is the level it gets judged at.
+  const level = scenario.level || "A2";
+  return `You are a CEFR examiner evaluating a German ${level} student after a role-play (scenario: "${scenario.title}").
 Write ALL feedback in English, be specific and encouraging. For each mistake, give the corrected German form, classify it with the closest "tag" error category, and mark its "severity".
 The student's goal was: "${scenario.goal}".
 Their tasks were, in this order: ${(scenario.tasks || []).map((t, i) => `${i + 1}. ${t}`).join(" ")}
 Report "goalCompletion" (0 not attempted, 1 attempted, 2 mostly done, 3 fully achieved) and one "taskResults" entry per task, in that order (0 skipped, 1 partial, 2 done). Judge only what the transcript shows.
-Rate grammar (0-5), vocabulary (0-5), and interaction (0-5) against the A2 level. Do not rate an overall score: that is computed separately.`;
+Rate grammar (0-5), vocabulary (0-5), and interaction (0-5) against the ${level} level. Do not rate an overall score: that is computed separately.`;
 }
 
 /** How the transcript is laid out under the examiner prompt. */
@@ -53,11 +57,11 @@ export const EVAL_SCHEMA = {
       items: { type: "integer", minimum: 0, maximum: 2 },
       description: "One rating per task of the briefing, in the same order as given: 0 skipped, 1 partial, 2 done",
     },
-    grammar: { type: "integer", minimum: 0, maximum: 5, description: "A2 grammar rating 0-5: range and accuracy of A2 structures (verb position, cases, articles)" },
-    vocab: { type: "integer", minimum: 0, maximum: 5, description: "A2 vocabulary rating 0-5: range and aptness of words for the situation" },
+    grammar: { type: "integer", minimum: 0, maximum: 5, description: "Grammar rating 0-5 at the level named above: range and accuracy of its structures (verb position, cases, articles)" },
+    vocab: { type: "integer", minimum: 0, maximum: 5, description: "Vocabulary rating 0-5 at the level named above: range and aptness of words for the situation" },
     interaction: {
       type: "integer", minimum: 0, maximum: 5,
-      description: "A2 interaction rating 0-5: did the student initiate, respond on-topic, and repair misunderstandings, or only give one-word replies",
+      description: "Interaction rating 0-5 at the level named above: did the student initiate, respond on-topic, and repair misunderstandings, or only give one-word replies",
     },
     summary: { type: "string", description: "One sentence summarizing performance, in English" },
     strengths: {

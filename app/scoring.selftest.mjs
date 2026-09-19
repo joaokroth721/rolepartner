@@ -114,6 +114,50 @@ for (const r of [best, ignoredBriefing, nearGoal, noGoal, halfTasks, empty, with
   assert.ok(r.score >= 0 && r.score <= 100, "score stays in 0-100");
 }
 
+// --- the coaching challenge: its phrases are the challenge ---
+// "Erfolgreich scheitern" exists to make the student qualify an argument rather than
+// call something simply good or bad. That only means anything if saying it moves the
+// number, so this asserts the forcing function rather than trusting the briefing.
+const coaching = byId("coaching");
+const coachingJudgement = {
+  goalCompletion: 3, taskResults: [2, 2, 2, 2], grammar: 4, vocab: 4, interaction: 4, corrections: [],
+};
+const hedged = [
+  { role: "user", content: "Ich bin mit meiner Firma gescheitert. Das war eine echte Niederlage." },
+  { role: "user", content: "Einerseits ist es positiv, dass ich genau plane, andererseits ist es problematisch, wenn ich zu langsam werde." },
+  { role: "user", content: "Das stimmt schon, aber so einfach ist das leider nicht." },
+  { role: "user", content: "Man kann zwar sagen, dass Ehrgeiz hilft, allerdings muss man auch bedenken, dass er schadet." },
+  { role: "user", content: "Kritisch wird es aber, wenn niemand Hilfe leistet." },
+  { role: "user", content: "Ich habe einen Entschluss gefasst: Das Scheitern wird mein Sprungbrett." },
+];
+const flat = [
+  { role: "user", content: "Meine Firma ist kaputt gegangen. Das war schlecht." },
+  { role: "user", content: "Ich plane sehr genau. Das ist gut." },
+  { role: "user", content: "Nein, das finde ich nicht." },
+  { role: "user", content: "Ehrgeiz ist gut. Ich bin ehrgeizig." },
+  { role: "user", content: "Ja, manchmal ist es schwer." },
+  { role: "user", content: "Ich will eine neue Firma machen." },
+];
+const hedgedRun = computeScore({ scenario: coaching, messages: hedged, judgement: coachingJudgement });
+const flatRun = computeScore({ scenario: coaching, messages: flat, judgement: coachingJudgement });
+assert.ok(
+  hedgedRun.score > flatRun.score,
+  `qualifying an argument must beat a flat one (${hedgedRun.score} vs ${flatRun.score})`
+);
+assert.ok(
+  hedgedRun.targetsUsed.some((t) => t.startsWith("Einerseits")),
+  "the einerseits/andererseits phrase must register from a natural sentence, not only verbatim"
+);
+assert.equal(flatRun.targetsUsed.length, 0, "a flat conversation hits none of the target phrases");
+
+// Skipping the two tasks that ask for the hedging costs points of its own, on top.
+const flatSkipped = computeScore({
+  scenario: coaching,
+  messages: flat,
+  judgement: { ...coachingJudgement, taskResults: [2, 0, 0, 2] },
+});
+assert.ok(flatSkipped.score < flatRun.score, "tasks the student skipped must cost points");
+
 console.log("scoring self-check passed");
 console.log("  perfect:", best.score, best.breakdown);
 console.log("  same run ignoring the briefing:", ignoredBriefing.score);
