@@ -595,3 +595,24 @@ could land on a Worker that never serves the app.
 - `How To/HowTo-backend.md` still prints the pre-`93c36b1` scoring weights (goal 30,
   conversation held 10, mistakes -10). Left alone here because scoring is being edited in
   parallel, but it is wrong today.
+
+## Talking illustration during the conversation (plan only)
+
+`plan_video.md` written, no code touched. The idea: while the partner speaks, show a person
+that represents the scenario with a mouth that moves.
+
+The deciding fact is that the conversation speaks with the browser's `speechSynthesis`
+(`app/page.js:835`), which plays straight to the OS and exposes no audio stream and no
+reliable viseme/word events. That splits every option in two: keep `speechSynthesis` and
+*fake* the mouth (free, unsynced), or replace it with fetched TTS audio played through an
+`<audio>` element to get a *real* amplitude/viseme mouth (costs money per reply, adds a
+round-trip).
+
+Four tiers, laziest first: Tier 0 a 2D **illustrated** persona (explicitly not realistic,
+one drawn character carrying both who the partner is and where the scene is) with a mouth
+faked off the existing "speaking" state - zero code cost, art is the only cost, recommended
+start; Tier 1 OpenAI TTS (key already wired) + wawa-lipsync for real browser lip-sync, which
+also replaces the robotic voice flagged at `page.js:607`; Tier 2 photoreal streaming avatars
+(HeyGen/Tavus/D-ID), rejected as overkill for a practice tool; Tier 3 pre-rendered video per
+reply, rejected as too slow for live chat. Open gate before building: leave the free browser
+voice for paid TTS or not - that is the Tier 0 to Tier 1 line.
