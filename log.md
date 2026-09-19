@@ -467,3 +467,131 @@ per active user per day to read.
   missing table cannot break the bootstrap call every screen waits on.
 - The user list runs three correlated subqueries per row. Right at this size, wrong at a
   hundred thousand users.
+
+## Admin review: verified end to end, and the way in
+
+The dashboard from `0557e23` had never been reviewed or opened by anyone. This pass was a
+review of it, a real end-to-end run against the local Worker, and the runbook the owner
+needs to actually get in.
+
+### What the review found
+
+Three things were changed; everything else stood.
+
+1. **A `POST /api/admin/admins` with a body that is not JSON returned 500.** `await
+   req.json()` threw into the `catch`, which is `oops()` - the convention for *unexpected*
+   failures. A body the caller sent is the caller's mistake: it now parses with a
+   `.catch(() => null)` and falls into the existing 400. `JSON.parse("null")` used to
+   throw on the destructuring too, and no longer does.
+
+2. **Adding an `ADMIN_EMAILS` address through the UI wrote a row nobody could see or
+   delete.** `INSERT OR IGNORE` ran for any valid address; `adminList()` then filtered that
+   row out of the response because the address is pinned, and `DELETE` refused it for the
+   same reason. Harmless while the address stays in the secret - and a silent revocation
+   failure the moment it is taken out, because the invisible row keeps granting access.
+   POST now skips the insert for a pinned address and returns the unchanged list, so the
+   trap cannot be created. Verified: `SELECT COUNT(*) FROM admins` stays 0 after adding a
+   pinned address.
+
+3. **`DELETE` checked "that is you" before "that is pinned".** For the owner - who is both
+   - the answer was "Du kannst dich nicht selbst entfernen", when the actionable answer is
+   "this comes from ADMIN_EMAILS and must be removed there". Order swapped. Same 400
+   either way, so nothing about access changed.
+
+Also added: `Cache-Control: no-store` on every 200 from the two admin routes, via
+`adminJson()` in `app/admin.js`. Every byte these routes return is other people's data, and
+without a directive a browser may keep a 200 in its disk cache - on a shared machine that
+outlives the session the gate checked. The gate is per request, so the answer must be too.
+
+What was looked at and left alone:
+
+- **No path reaches admin data without `requireAdmin`.** `app/adminreport.js` is not
+  imported anywhere else; both routes call the gate before anything else, and the client
+  page holds no cross-user data of its own - every table it draws comes from a gated fetch,
+  so a stranger who forces `/admin` open gets the shell and a 403.
+- **Every statement is parameterised.** `before`, `id` and `limit` are bound;
+  `scenarioId` is validated against `scenarios.js` first and dropped if unknown; `view` is
+  compared, never interpolated. The `WHERE` clause in `conversationList` is assembled from
+  fixed strings with `?` placeholders, in step with the bind array.
+- **Nothing in `/api/admin` mints or returns an identity cookie.** The gate deliberately
+  does not call `resolveUser`, and the routes never call `json()`. Confirmed on the wire:
+  no `Set-Cookie` on 401, 403 or 200, and `users` stayed at 5 rows across every
+  unauthenticated probe.
+- **Errors do not leak internals.** `oops()` returns one fixed German sentence and logs the
+  stack; `fail()` carries only messages written for a person.
+
+### Measured, not assumed
+
+Local D1 rebuilt from scratch (`rm -rf .wrangler`, then all three migrations: 0003 applied
+cleanly on top of an empty database, creating `admins`, `visits`, `ai_tokens`) and seeded
+with 5 users (3 with an email, 2 anonymous), 8 `visits` rows over three days, 6 `ai_tokens`
+rows over three days, 4 `sessions` across three scenarios and 2 favorites. Then
+`opennextjs-cloudflare build` + `npx wrangler dev` on :8787, driven with curl and with
+Playwright.
+
+**The session was real, not stubbed.** Auth.js's own `encode()` from `next-auth/jwt` minted
+an `authjs.session-token` with the same `AUTH_SECRET` the Worker had in `.dev.vars`, and
+the Worker's own `auth()` decrypted it - confirmed by `/api/auth/session` returning the
+account. Nothing in `app/` was patched for the test and no shim is left behind; the only
+untestable part is Google's own redirect, which cannot be completed from this sandbox. The
+`GOOGLE_*` values were dummies, which the session-read path never touches.
+
+Observed:
+
+- No session: 401 `{"error":"Nicht angemeldet."}` on all four endpoints, no `Set-Cookie`,
+  no new row in `users`.
+- `anna@example.com`, signed in, not on the list: 403 `{"error":"Kein Zugriff."}` on all
+  four, and the page renders "No access" rather than an error.
+- `joao.kroth7@gmail.com` via `ADMIN_EMAILS`: 200 everywhere. Overview returned
+  `you: joao.kroth7@gmail.com`, 32 page opens (13 today), 5 users (3 with an email), 4
+  conversations averaging 61, 52 AI calls, 50,700 tokens, $0.006035 estimated - each figure
+  re-derived from the seed by hand and matching. 14-day series filled every day including
+  the empty ones.
+- Allow list: add lowercases and trims (`"  Anna@Example.com "` -> `anna@example.com`) and
+  the added address goes from 403 to 200 immediately; a duplicate add keeps the original
+  `added_by`; removing takes it back to 403. 400 for an invalid address, for a malformed
+  body, for removing yourself, and for removing a pinned address - tested with a second
+  pinned address (`Owner2@Example.com`, mixed case in the env, normalised on read) so the
+  pinned branch was reached without the self check short-circuiting it. 403 for a
+  cross-site `Origin`, 200 for the page's own.
+- Conversations: list, `scenarioId` filter, one conversation by id, 404 for a missing id,
+  404 for `id=abc`, 400 for an unknown `view`, and `scenarioId=1' OR 1=1--` ignored
+  (4 rows, i.e. unfiltered) rather than reaching SQL.
+- `/api/me` with the owner's session returns `"admin":true`, which is what puts the Admin
+  link in the learner top bar; `anna` gets `false`, anonymous gets `false`.
+- In a real browser (Playwright, Chromium): all five tabs rendered with the seeded data and
+  **zero page errors**; signed out shows "Not signed in" with the Google button, non-admin
+  shows "No access", and a conversation opens with its transcript and the examiner JSON.
+- `npx next build` clean; `scoring`, `history` and `texts` self-tests pass.
+
+### The owner's way in
+
+`joao.kroth7@gmail.com` is now the documented value of `ADMIN_EMAILS` in `.env.example` and
+`.dev.vars.example`, and nowhere else. Not in application code and not in a migration: who
+may read every user's data is environment configuration, it has to change without a code
+deploy, and a migration would bake it into a database that outlives any decision about it.
+The example files are templates the app never reads, so this is documentation, not a
+default that takes effect anywhere.
+
+`How To/HowTo-admin.md` is the runbook, in order, with what to expect after each command:
+migration 0003 `--remote`, the Google OAuth client (consent screen in *Testing* needs the
+owner as a test user, redirect URI
+`https://app.rolepartner.workers.dev/api/auth/callback/google`), one deploy **before** the
+secrets so the Worker exists under its new name `app`, then `wrangler secret put` for
+`AUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `ADMIN_EMAILS`, then sign in
+and open `/admin`. The deploy-first order matters: secrets belong to a Worker by name, and
+`app` (commit `f90e03d`) has never been deployed, so anything set before that first deploy
+could land on a Worker that never serves the app.
+
+### Still open
+
+- Nothing here can be verified in production from this session: `api.cloudflare.com` and
+  `workers.dev` are blocked by the egress proxy. Everything above is the local Worker.
+  The remaining steps are account setup, not code, and are the runbook.
+- `AUTH_URL` is still not set anywhere. `auth.js` has `trustHost: true`, so the callback
+  origin is taken from the request and the deploy works without it; it is only needed if
+  the app is ever served from a second hostname.
+- The user list still runs three correlated subqueries per row (unchanged from `0557e23`).
+- `How To/HowTo-backend.md` still prints the pre-`93c36b1` scoring weights (goal 30,
+  conversation held 10, mistakes -10). Left alone here because scoring is being edited in
+  parallel, but it is wrong today.

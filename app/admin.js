@@ -57,6 +57,16 @@ export async function requireAdmin(db) {
   return { email };
 }
 
+/**
+ * JSON for an admin response, marked never to be stored.
+ *
+ * Everything these routes return is other people's data. Without a cache directive a
+ * browser is free to keep a 200 in its disk cache, and on a shared machine the next
+ * person to open the page is the one who reads it; an intermediary cache is the same
+ * problem one hop further away. The gate is per-request, so the answer must be too.
+ */
+export const adminJson = (data) => Response.json(data, { headers: { "cache-control": "no-store" } });
+
 // Anything that is not one address with one @ and no spaces is rejected before it can be
 // stored: an entry that can never match a Google email is only a way to lose track of
 // who actually has access.

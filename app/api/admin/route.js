@@ -1,5 +1,5 @@
 import { getDb, oops, fail } from "../../db";
-import { requireAdmin } from "../../admin";
+import { requireAdmin, adminJson } from "../../admin";
 import { knownScenario } from "../../guard";
 import {
   overview,
@@ -33,10 +33,10 @@ export async function GET(req) {
     const params = new URL(req.url).searchParams;
     const view = params.get("view") || "overview";
 
-    if (view === "overview") return Response.json({ you: email, ...(await overview(db)) });
+    if (view === "overview") return adminJson({ you: email, ...(await overview(db)) });
 
     if (view === "users") {
-      return Response.json({
+      return adminJson({
         users: await userList(db, MAX_USERS),
         admins: await adminList(db),
         limit: MAX_USERS,
@@ -47,7 +47,7 @@ export async function GET(req) {
       // Only the per-scenario play counts, not the whole overview: the token and visit
       // aggregates behind it cost four more queries that this view never draws.
       const { byScenario } = await conversationStats(db);
-      return Response.json({ challenges: challenges(byScenario), methodology: methodology() });
+      return adminJson({ challenges: challenges(byScenario), methodology: methodology() });
     }
 
     if (view === "conversations") {
@@ -55,10 +55,10 @@ export async function GET(req) {
       if (asked !== null) {
         const found = await conversation(db, Number(asked));
         if (!found) return fail("Gespräch nicht gefunden.", 404);
-        return Response.json({ conversation: found });
+        return adminJson({ conversation: found });
       }
       const scenarioId = knownScenario(params.get("scenarioId"))?.id || null;
-      return Response.json(
+      return adminJson(
         await conversationList(db, { limit: PAGE, before: params.get("before"), scenarioId })
       );
     }

@@ -10,7 +10,9 @@ AUTH_SECRET=
 AUTH_URL=http://localhost:8787
 
 # Quem abre /admin (lista separada por vírgula). Ver .env.example.
-ADMIN_EMAILS=
+# O dono do app é joao.kroth7@gmail.com. Em produção isto é um secret do Worker
+# (`npx wrangler secret put ADMIN_EMAILS`), não este arquivo: "How To/HowTo-admin.md".
+ADMIN_EMAILS=joao.kroth7@gmail.com
 
 # Sal para o id pseudônimo de analytics (opcional; sem ele, analyticsId fica null).
 #   openssl rand -hex 16
