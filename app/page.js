@@ -183,7 +183,7 @@ const BREAKDOWN_LABEL = {
   tasks: "Aufgaben",
   grammar: "Grammatik",
   vocabulary: "Wortschatz",
-  engagement: "Gesprächsanteil",
+  interaction: "Interaktion",
 };
 
 function ScoreBreakdown({ breakdown }) {
@@ -209,11 +209,6 @@ function ScoreBreakdown({ breakdown }) {
           );
         })}
       </div>
-      {breakdown.penalty > 0 && (
-        <p className="corr-note" style={{ marginTop: 12 }}>
-          Abzug für Fehler: -{breakdown.penalty}
-        </p>
-      )}
     </div>
   );
 }
@@ -889,7 +884,7 @@ export default function Home() {
         score_band: scoreClass(res.score),
         grammar: b.grammar ?? null,
         vocabulary: b.vocabulary ?? null,
-        goal_reached: Boolean(res.evaluation?.goalReached),
+        goal_reached: (res.evaluation?.goalCompletion ?? 0) >= 2,
         user_turns: turns.user_turns,
       });
     } catch (e) {

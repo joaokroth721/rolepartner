@@ -10,16 +10,23 @@ import { wrongOrigin, knownScenario, badTranscript, overQuota } from "../../guar
 const evalSchema = jsonSchema({
   type: "object",
   additionalProperties: false,
-  required: ["goalReached", "taskResults", "grammar", "vocab", "summary", "strengths", "corrections", "tip"],
+  required: ["goalCompletion", "taskResults", "grammar", "vocab", "interaction", "summary", "strengths", "corrections", "tip"],
   properties: {
-    goalReached: { type: "boolean", description: "Did the student achieve the scenario's goal?" },
+    goalCompletion: {
+      type: "integer", minimum: 0, maximum: 3,
+      description: "How far the student got toward the goal: 0 not attempted, 1 attempted, 2 mostly done, 3 fully achieved",
+    },
     taskResults: {
       type: "array",
-      items: { type: "boolean" },
-      description: "One true/false per task of the briefing, in the same order as given",
+      items: { type: "integer", minimum: 0, maximum: 2 },
+      description: "One rating per task of the briefing, in the same order as given: 0 skipped, 1 partial, 2 done",
     },
-    grammar: { type: "integer", minimum: 0, maximum: 5, description: "Grammar rating 0-5" },
-    vocab: { type: "integer", minimum: 0, maximum: 5, description: "Vocabulary rating 0-5" },
+    grammar: { type: "integer", minimum: 0, maximum: 5, description: "A2 grammar rating 0-5: range and accuracy of A2 structures (verb position, cases, articles)" },
+    vocab: { type: "integer", minimum: 0, maximum: 5, description: "A2 vocabulary rating 0-5: range and aptness of words for the situation" },
+    interaction: {
+      type: "integer", minimum: 0, maximum: 5,
+      description: "A2 interaction rating 0-5: did the student initiate, respond on-topic, and repair misunderstandings, or only give one-word replies",
+    },
     summary: { type: "string", description: "One sentence summarizing performance, in English" },
     strengths: {
       type: "array", minItems: 1, maxItems: 3,
@@ -31,12 +38,13 @@ const evalSchema = jsonSchema({
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["wrong", "right", "note", "tag"],
+        required: ["wrong", "right", "note", "tag", "severity"],
         properties: {
           wrong: { type: "string", description: "What the student said (in German)" },
           right: { type: "string", description: "The correct German form" },
           note: { type: "string", description: "Short explanation, in English" },
           tag: { type: "string", enum: TAGS, description: "Error category (closest match)" },
+          severity: { type: "string", enum: ["major", "minor"], description: "major if it impedes meaning, minor otherwise" },
         },
       },
       description: "Main grammar or vocabulary mistakes",
@@ -69,14 +77,20 @@ export async function POST(req) {
     const { object } = await generateObject({
       model: openai("gpt-5-nano"),
       schema: evalSchema,
-      system: `You are a German teacher evaluating a student after a role-play (scenario: "${scenario.title}").
-Write ALL feedback in English, be specific and encouraging. For each mistake, give the corrected German form and classify it with the closest "tag" error category.
+      temperature: 0,
+      system: `You are a CEFR examiner evaluating a German A2 student after a role-play (scenario: "${scenario.title}").
+Write ALL feedback in English, be specific and encouraging. For each mistake, give the corrected German form, classify it with the closest "tag" error category, and mark its "severity".
 The student's goal was: "${scenario.goal}".
 Their tasks were, in this order: ${(scenario.tasks || []).map((t, i) => `${i + 1}. ${t}`).join(" ")}
-Report "goalReached" and one "taskResults" entry per task, in that order. Judge only what the transcript shows.
-Rate grammar (0-5) and vocabulary (0-5). Do not rate an overall score: that is computed separately.`,
+Report "goalCompletion" (0 not attempted, 1 attempted, 2 mostly done, 3 fully achieved) and one "taskResults" entry per task, in that order (0 skipped, 1 partial, 2 done). Judge only what the transcript shows.
+Rate grammar (0-5), vocabulary (0-5), and interaction (0-5) against the A2 level. Do not rate an overall score: that is computed separately.`,
       prompt: `Conversa:\n${transcript}`,
     });
+
+    // Show the mistakes that impede meaning first.
+    object.corrections = (object.corrections || []).sort(
+      (a, b) => (a.severity === "major" ? 0 : 1) - (b.severity === "major" ? 0 : 1)
+    );
 
     // The score is derived here, from the model's observations plus what the transcript
     // itself proves (target words used, turns taken).

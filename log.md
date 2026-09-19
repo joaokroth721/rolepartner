@@ -189,6 +189,49 @@ deleted separately or it keeps serving the old URL.
 
 ---
 
+## 9. Evaluation model reworked (Version A)
+
+Kept the architecture that was already right: the model reports observations, server code
+in `app/scoring.js` computes the score. Fixed five weaknesses of the old rubric, none of
+which needed a new LLM call or per-scenario machinery. Weights still sum to 100, now:
+goal 25, tasks 20, grammar 20, vocabulary 20, interaction 15.
+
+- **Goal is graded 0-3, not a boolean.** A near-miss now beats a no-show
+  (`goalCompletion: 2` scores 92 vs 75 for full miss on the perfect transcript). Old
+  all-or-nothing goal made "almost closed the deal" score identically to "never tried".
+- **Tasks graded 0-2 each** instead of done/not-done, so partial task credit is smooth.
+- **Removed the per-error penalty.** It double-counted: grammar errors already lower the
+  grammar rating, and the penalty was a function of how many corrections the model chose
+  to *report* (capped at 5), not how many were made. Grammar accuracy is the grammar
+  rating's job alone now.
+- **Vocabulary split inverted to 12 judged + 8 measured** (was 12 measured + 8 judged).
+  Correct paraphrase that never says the exact briefing lemma is no longer punished, but
+  the measured floor still stops a fluent improviser from maxing vocab by ignoring the
+  briefing. The `targetsUsed()` string matcher is unchanged, just weighted less.
+- **Engagement (raw turn count) replaced by interaction:** the model's 0-5 interaction
+  rating gated by a turn-count floor, so quality is judged but a one-line transcript still
+  can't claim full marks (`min(5, ceil(5*turns/4))`). Raw turn count rewarded padding;
+  monosyllabic "ja/nein" turns can't game the new one.
+
+All ratings are now anchored to explicit CEFR-A2 descriptors in the prompt, and the
+`generateObject` call runs at `temperature: 0`, so the same transcript yields the same
+observations and therefore the same score. Corrections gained a `severity` field
+(major/minor); the route sorts major first, and it drives display only, never the score.
+
+Touched: `app/scoring.js` (formula), `app/api/feedback/route.js` (schema + prompt +
+sort), `app/page.js` (breakdown label engagement to interaction, dropped the penalty
+line, PostHog `goal_reached` now `goalCompletion >= 2`), `app/scoring.selftest.mjs`
+(rewritten for the new judgement shape). Self-test passes. Not committed yet.
+
+Old `sessions` rows carry the old breakdown shape (`engagement`, `penalty`,
+`goalReached`); the history/session screens just omit the bar they no longer recognize,
+which is harmless. `sessions` is empty anyway until `OPENAI_API_KEY` is set.
+
+The three candidate methodologies (A, B, C) are written up in `evaluation.md`; this
+implements A.
+
+---
+
 ## State at the end of the day
 
 Deployed and working: Cloudflare Workers, D1, favorites, leaderboard, streak,

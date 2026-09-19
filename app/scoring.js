@@ -1,32 +1,35 @@
 // How a conversation becomes a number between 0 and 100.
 //
 // The model does NOT hand us a score. It reports observations it is actually good at
-// (did the goal get reached, which tasks happened, how clean was the grammar), and the
+// (how far the goal got, which tasks happened, how clean the grammar was), and the
 // score is computed here, on the server, from those observations plus facts measured
 // directly from the transcript. Two reasons:
 //   1. A score the client sends can be forged; a score derived here cannot.
 //   2. A single "rate this 0-100" call drifts between runs. Fixed weights do not, so two
 //      equivalent conversations get equivalent scores and the leaderboard means something.
+//
+// Every rated observation is graded on a fixed CEFR-A2 scale in the prompt, and every
+// term below is a clean fraction of its weight, so partial credit is smooth: a near-miss
+// beats a no-show instead of falling off a cliff.
 
 // What each part of the conversation is worth. They add up to 100.
 export const WEIGHTS = {
-  goal: 30, // did the student achieve what the scenario asked
-  tasks: 20, // the individual steps of the briefing
+  goal: 25, // how far the student got toward what the scenario asked (graded 0-3)
+  tasks: 20, // the individual steps of the briefing (each graded 0-2)
   grammar: 20, // how correct the German was
-  vocabulary: 20, // 12 for target words actually used, 8 for the model's rating
-  engagement: 10, // did they actually hold a conversation
+  vocabulary: 20, // 12 for the model's judged use, 8 for target words actually said
+  interaction: 15, // was it a real exchange: initiating, responding on-topic, repairing
 };
 
-// Enough target words to count as full marks: hitting 5 of a scenario's 13 vocab and
+// Enough target words to count as full marks: hitting 5 of a scenario's vocab and
 // phrase entries is already good use of the briefing, and scenarios differ in size.
 const TARGET_SAMPLE = 5;
-// A conversation of this many student turns is a complete attempt.
-const FULL_TURNS = 6;
-// Corrections above this many start costing points, one point each.
-const FREE_ERRORS = 2;
-const MAX_PENALTY = 10;
+// Fewer student turns than this cannot prove real interaction, so the interaction score
+// is capped in proportion: a one-line "conversation" can never claim full marks for it.
+const MIN_MEANINGFUL_TURNS = 4;
 
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+const num = (x) => Number(x) || 0;
 
 // Strip articles, punctuation and case so "Die Fahrkarte," matches "eine fahrkarte".
 const ARTICLES = new Set(["der", "die", "das", "den", "dem", "des", "ein", "eine", "einen", "einem", "einer"]);
@@ -72,46 +75,48 @@ export function targetsUsed(scenario, studentText) {
 /**
  * The score and the breakdown behind it.
  *
- * `judgement` is what the model returned: { goalReached, taskResults[], grammar, vocab,
- * corrections[] }. `messages` is the transcript, where role "user" is the student.
+ * `judgement` is what the model returned: { goalCompletion (0-3), taskResults[] (each
+ * 0-2), grammar (0-5), vocab (0-5), interaction (0-5), corrections[] }. `messages` is
+ * the transcript, where role "user" is the student.
  */
 export function computeScore({ scenario, messages = [], judgement = {} }) {
   const studentTurns = messages.filter((m) => m.role === "user");
   const studentText = studentTurns.map((m) => m.content).join(" ");
 
-  // Goal: the scenario either got done or it did not.
-  const goal = judgement.goalReached ? WEIGHTS.goal : 0;
+  // Goal: graded, not all-or-nothing. 0 not attempted, 3 fully achieved. A near-miss
+  // keeps most of the weight it earned.
+  const goal = Math.round((WEIGHTS.goal * clamp(num(judgement.goalCompletion), 0, 3)) / 3);
 
-  // Tasks: the share of the briefing's steps that happened. A scenario without tasks
-  // cannot lose points it never offered, so it scores full.
+  // Tasks: the share of the briefing's steps that happened, each step graded 0-2. A
+  // scenario without tasks cannot lose points it never offered, so it scores full.
   const taskList = scenario.tasks || [];
-  const done = (judgement.taskResults || []).filter(Boolean).length;
-  const tasks = taskList.length === 0 ? WEIGHTS.tasks : Math.round((WEIGHTS.tasks * clamp(done, 0, taskList.length)) / taskList.length);
+  const taskResults = (judgement.taskResults || []).map((t) => clamp(num(t), 0, 2));
+  const earned = taskResults.reduce((a, b) => a + b, 0);
+  const tasks = taskList.length === 0 ? WEIGHTS.tasks : Math.round((WEIGHTS.tasks * clamp(earned, 0, 2 * taskList.length)) / (2 * taskList.length));
 
-  // Grammar: the model's 0-5 rating, scaled.
-  const grammar = Math.round((WEIGHTS.grammar * clamp(Number(judgement.grammar) || 0, 0, 5)) / 5);
+  // Grammar: the model's 0-5 rating, scaled. Errors are already reflected here, so they
+  // are never charged a second time as a separate penalty.
+  const grammar = Math.round((WEIGHTS.grammar * clamp(num(judgement.grammar), 0, 5)) / 5);
 
-  // Vocabulary: mostly measured, partly judged. The measured part is what stops a fluent
-  // improviser who ignores the briefing from scoring the same as someone who used it.
+  // Vocabulary: mostly judged, partly measured. The measured floor is what stops a fluent
+  // improviser who ignores the briefing from maxing out vocab; the larger judged part
+  // rewards correct paraphrase that never says the exact briefing lemma.
   const hits = targetsUsed(scenario, studentText);
-  const targetPool = Math.min(TARGET_SAMPLE, (scenario.vocab?.length || 0) + (scenario.phrases?.length || 0)) || 1;
-  const measured = Math.round((12 * Math.min(hits.length, targetPool)) / targetPool);
-  const judged = Math.round((8 * clamp(Number(judgement.vocab) || 0, 0, 5)) / 5);
-  const vocabulary = measured + judged;
+  const pool = Math.min(TARGET_SAMPLE, (scenario.vocab?.length || 0) + (scenario.phrases?.length || 0)) || 1;
+  const judged = Math.round((12 * clamp(num(judgement.vocab), 0, 5)) / 5);
+  const measured = Math.round((8 * Math.min(hits.length, pool)) / pool);
+  const vocabulary = judged + measured;
 
-  // Engagement: a two-word conversation is not an A2 role-play, whatever else is true.
-  const engagement = Math.round((WEIGHTS.engagement * Math.min(studentTurns.length, FULL_TURNS)) / FULL_TURNS);
+  // Interaction: quality (the model's rating) gated by sufficiency (turns taken). A short
+  // transcript cannot claim full interaction however generous the model was.
+  const floor = Math.min(5, Math.ceil((5 * studentTurns.length) / MIN_MEANINGFUL_TURNS));
+  const interaction = Math.round((WEIGHTS.interaction * Math.min(clamp(num(judgement.interaction), 0, 5), floor)) / 5);
 
-  // Errors past a small allowance cost a point each. Corrections are capped at 5 by the
-  // schema, so this can never dominate the score.
-  const errors = (judgement.corrections || []).length;
-  const penalty = clamp(Math.max(0, errors - FREE_ERRORS), 0, MAX_PENALTY);
-
-  const score = clamp(goal + tasks + grammar + vocabulary + engagement - penalty, 0, 100);
+  const score = clamp(goal + tasks + grammar + vocabulary + interaction, 0, 100);
 
   return {
     score,
-    breakdown: { goal, tasks, grammar, vocabulary, engagement, penalty },
+    breakdown: { goal, tasks, grammar, vocabulary, interaction },
     targetsUsed: hits,
     turns: studentTurns.length,
   };
