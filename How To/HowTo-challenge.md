@@ -134,6 +134,27 @@ The leaderboard is **per-scenario and personal** (your own attempts, ranked). A 
 
 ---
 
+## Where the content comes from
+
+Challenges are built from the Kursbuch, one lesson at a time, and the owner sends photos of
+the pages. **The KOMMUNIKATION boxes are the point of the challenge.** They are the phrase
+sets the lesson is teaching (for example "Argumente einschränken", "Verzicht ausdrücken"),
+and a challenge exists to make the learner say them out loud.
+
+So, when building from a lesson:
+
+- Put every Kommunikation box into `phrases`. That is not decoration: the measured half of
+  the vocabulary score matches `phrases` against the transcript, so saying them earns points.
+- Give each box its own entry in `tasks`, worded as the move it asks for. The examiner
+  grades every task 0-2, so skipping a box costs points too.
+- Check both actually fire before shipping, with a sentence a learner would really say
+  rather than the template recited verbatim. `app/scoring.selftest.mjs` has examples for the
+  "coaching" and "minimalismus" challenges; phrase matching needs 60 percent of the content
+  words, so a template with a gap in the middle still matches a filled-in sentence.
+
+Vocabulary and grammar from the lesson belong in `vocab` and in the partner's `system`
+prompt; the lesson's reading text belongs in a text (see `HowTo-text.md`), not here.
+
 ## Recipe: add a new challenge
 
 1. Open `app/scenarios.js`, copy an existing object, give it a unique `id`.

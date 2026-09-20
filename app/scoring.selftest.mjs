@@ -158,6 +158,44 @@ const flatSkipped = computeScore({
 });
 assert.ok(flatSkipped.score < flatRun.score, "tasks the student skipped must cost points");
 
+// --- the minimalism challenge carries three Kommunikation boxes, not one ---
+// Lektion 11 has three: Einschätzungen formulieren, Verzicht ausdrücken, Argumente
+// einschränken. Each must register from a sentence a learner would actually say, or the
+// briefing is decoration.
+const minimal = byId("minimalismus");
+const boxLines = [
+  "Ich persönlich würde mich in so einer Wohnung wohlfühlen, weil ich dann Platz zum Denken habe.",
+  "Was mir auf jeden Fall fehlen würde, wäre meine Bücherwand.",
+  "Also, ich könnte auf meinen zweiten Drucker verzichten. Den brauche ich sowieso nicht.",
+  "Die Anzahl meiner T-Shirts könnte ich reduzieren und den Rest spenden.",
+  "Ich denke zwar auch, dass Dinge Geschichten erzählen, das heißt jedoch nicht, dass ich jeden Krempel behalten muss.",
+  "Es stimmt zwar, dass ein Auto praktisch ist, aber entscheidend ist für mich, dass ich es fast nie benutze.",
+];
+for (const line of boxLines) {
+  const hits = targetsUsed(minimal, line);
+  assert.ok(
+    hits.some((h) => minimal.phrases.some((p) => p.de === h)),
+    `a Kommunikation phrase must match from a natural sentence: ${line.slice(0, 50)}`
+  );
+}
+const minimalJudgement = {
+  goalCompletion: 3, taskResults: [2, 2, 2, 2], grammar: 4, vocab: 4, interaction: 4, corrections: [],
+};
+const spoken = computeScore({
+  scenario: minimal,
+  messages: boxLines.map((content) => ({ role: "user", content })),
+  judgement: minimalJudgement,
+});
+const bland = computeScore({
+  scenario: minimal,
+  judgement: minimalJudgement,
+  messages: ["Ja, das wäre schön.", "Ich habe zu viele Sachen.", "Das Auto kann weg.", "Ja, da stimme ich zu.", "Okay, gut.", "Die dritte Methode nehme ich."].map(
+    (content) => ({ role: "user", content })
+  ),
+});
+assert.ok(spoken.score > bland.score, `using the boxes must beat bland agreement (${spoken.score} vs ${bland.score})`);
+assert.equal(bland.targetsUsed.length, 0, "bland agreement hits none of the targets");
+
 console.log("scoring self-check passed");
 console.log("  perfect:", best.score, best.breakdown);
 console.log("  same run ignoring the briefing:", ignoredBriefing.score);

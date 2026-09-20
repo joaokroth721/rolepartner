@@ -110,6 +110,69 @@ Wenn der Nutzer eine Eigenschaft nur als Stärke nennt, verlange die Kehrseite.
 Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu einem neuen Ziel.`,
   },
   {
+    id: "minimalismus",
+    category: "Konsum",
+    level: "B1",
+    photo: "https://picsum.photos/seed/minimalismus/600/400",
+
+    title: "Weniger ist mehr",
+    desc: "Sei zu Gast im Podcast und sprich über Entrümpeln, Verzicht und Konsum.",
+
+    place: "Du bist zu Gast im Podcast „so einfach“ von Sabrina Krause. Das Thema heute: Minimalismus.",
+    placeEn: "You are a guest on Sabrina Krause's podcast \"so einfach\". Today's topic: minimalism.",
+    goal: "Schätze ein minimalistisches Leben ein und entscheide dich für drei Dinge, auf die du verzichten kannst.",
+    goalEn: "Judge what a minimalist life would be like, and settle on three things you could do without.",
+    // One task per Kommunikation box of the lesson: Einschätzungen formulieren (S. 54),
+    // Verzicht ausdrücken (S. 55) and Argumente einschränken (S. 57). The examiner grades
+    // each task 0-2, so skipping a box is what costs points, not merely sounding flat.
+    tasks: [
+      "Sag, wie du dich in einer fast leeren Wohnung fühlen würdest, und warum",
+      "Nenne drei Dinge, auf die du verzichten könntest, und begründe es",
+      "Schränke Sabrinas Argument ein, statt einfach zuzustimmen",
+      "Entscheide dich für eine Entrümpelungsmethode und begründe die Wahl",
+    ],
+    tasksEn: [
+      "Say how you would feel in an almost empty flat, and why",
+      "Name three things you could do without, and say why",
+      "Qualify Sabrina's argument instead of simply agreeing",
+      "Choose a decluttering method and justify the choice",
+    ],
+
+    vocab: [
+      { de: "entrümpeln", en: "to declutter" },
+      { de: "aussortieren", en: "to sort out, to weed out" },
+      { de: "der Krempel", en: "the junk, the clutter (colloquial)" },
+      { de: "der Krimskrams", en: "the odds and ends (colloquial)" },
+      { de: "verzichten auf", en: "to do without" },
+      { de: "verschenken", en: "to give away" },
+      { de: "spenden", en: "to donate" },
+      { de: "der Gegenstand", en: "the object, the item" },
+      { de: "mit wenig auskommen", en: "to get by with little" },
+      { de: "in einem guten Zustand sein", en: "to be in good condition" },
+    ],
+    // The three Kommunikation boxes of the lesson, in the order the tasks ask for them.
+    // These are also the target phrases the score measures against the transcript, so
+    // saying them is worth points and not only style.
+    phrases: [
+      { de: "Ich persönlich würde mich wohlfühlen, weil …", en: "Personally I would feel comfortable, because …" },
+      { de: "Was mir auf jeden Fall fehlen würde, wäre …", en: "What I would definitely miss would be …" },
+      { de: "Also, ich könnte auf … verzichten. Den brauche ich sowieso nicht.", en: "Well, I could do without … I do not need it anyway." },
+      { de: "Die Anzahl meiner … könnte ich reduzieren.", en: "I could reduce the number of my …" },
+      { de: "Ich denke zwar auch, dass …, das heißt jedoch nicht, dass …", en: "I do think as well that …, that does not mean however that …" },
+      { de: "Es stimmt zwar, dass …, aber entscheidend ist für mich, dass …", en: "It is true that …, but what is decisive for me is that …" },
+    ],
+
+    system: `Du bist Sabrina Krause, Minimalismus-Bloggerin und Hostin des Podcasts „so einfach“.
+Der Nutzer übt Deutsch und ist heute dein Gast im Podcast.
+Bleib immer in der Rolle. Sprich nur Deutsch, in kurzen, natürlichen Sätzen (max. 2 Sätze).
+Du bist locker, konkret und neugierig, und du fragst wie im Podcast: erst das Gefühl, dann die Dinge, dann die Methode.
+Frag nach Gegenständen, nicht nach Theorie ("Was liegt bei dir seit Jahren ungenutzt herum?").
+Widersprich dem Nutzer mindestens einmal freundlich ("Aber Dinge erzählen doch Geschichten." / "Ohne Auto geht es nicht."),
+damit er sein Argument einschränken muss statt nur zuzustimmen.
+Stell am Ende die drei Methoden vor: Korb-Methode, Karton-Methode, Drei-Kisten-Methode.
+Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu einer Entscheidung.`,
+  },
+  {
     id: "restaurant",
     category: "Essen",
     level: "A2",

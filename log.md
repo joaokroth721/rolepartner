@@ -291,6 +291,45 @@ Checked in a browser at 390px, both screens: panel present during the conversati
 4 of 4 English lines blurred by default, none after the toggle with the panel still open,
 folded away on a summary click, and no page errors. The briefing renders as before.
 
+## 20.09.2026
+
+### New challenge: "Weniger ist mehr"
+
+From Lektion 11 (Konsum, Minimalismus): the learner is a guest on Sabrina Krause's podcast
+"so einfach" and talks about decluttering. B1, category Konsum, playable.
+
+This lesson carries **three** Kommunikation boxes rather than one, so the challenge has one
+task per box, each worded as the move it asks for:
+
+| Page | Box | Task |
+| --- | --- | --- |
+| 54 | Einschätzungen formulieren | Say how you would feel in an almost empty flat, and why |
+| 55 | Verzicht ausdrücken | Name three things you could do without, and say why |
+| 57 | Argumente einschränken | Qualify Sabrina's argument instead of simply agreeing |
+
+Worth noting: the S.57 set is *not* the same wording as Lektion 10's box of the same name
+("Ich denke zwar auch, dass … Das heißt jedoch nicht, dass …" against "Einerseits …
+andererseits …"), so both sets exist in the app separately rather than one standing in for
+the other.
+
+Measured, not assumed: each of the six phrases matches from a sentence a learner would
+really say rather than the template recited, and with identical examiner ratings the spoken
+run scores 91 against 83 for bland agreement, before the task grading adds its own gap.
+`app/scoring.selftest.mjs` asserts every box individually, so a reworded phrase that stops
+matching fails the test instead of silently scoring nothing.
+
+Sabrina is prompted to contradict the learner at least once ("Aber Dinge erzählen doch
+Geschichten.") precisely so the third box has something to qualify.
+
+### The Kommunikation rule is now written down
+
+`How To/HowTo-challenge.md` gained a "Where the content comes from" section: challenges are
+built from Kursbuch lessons, and the KOMMUNIKATION boxes are the point of the challenge,
+not decoration. Every box goes into `phrases` (which the measured half of the vocabulary
+score matches against the transcript) and gets its own entry in `tasks` (which the examiner
+grades 0-2), and both must be checked to fire before shipping. This was implicit in the two
+challenges built so far and is now the documented recipe.
+
 ## State at the end of the day
 
 Deployed and working: Cloudflare Workers, D1, favorites, leaderboard, streak,
