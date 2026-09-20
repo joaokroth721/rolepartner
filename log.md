@@ -330,6 +330,43 @@ score matches against the transcript) and gets its own entry in `tasks` (which t
 grades 0-2), and both must be checked to fire before shipping. This was implicit in the two
 challenges built so far and is now the documented recipe.
 
+## 20.09.2026
+
+### New challenge: "Weniger ist mehr" (Lektion 11, Minimalismus)
+
+A podcast recording with Sabrina Krause, the minimalism blogger from the chapter. B1,
+category Konsum, playable; no partner illustration yet, so it exercises the fallback the
+Tier 0 work added.
+
+This lesson carries **three** Kommunikation boxes rather than one, and the challenge is
+built so each is a required move:
+
+| Box | Page | Task |
+| --- | --- | --- |
+| Einschätzungen formulieren | 54 | Say how an almost empty flat would feel, and why |
+| Verzicht ausdrücken | 55 | Name three things you could do without |
+| Argumente einschränken | 57 | Qualify Sabrina's argument instead of agreeing |
+
+Note the "Argumente einschränken" set here is worded differently from Lektion 10's
+("Ich denke zwar auch, dass … Das heißt jedoch nicht, dass …"), so both sets exist in the
+app, each attached to its own challenge.
+
+Measured, not assumed: all six phrases register from sentences a learner would really say
+rather than the template recited, and with identical examiner ratings a conversation that
+uses the boxes scores 91 against 83 for bland agreement. `app/scoring.selftest.mjs` now
+asserts each box matches individually, which is stricter than the coaching test: it checks
+the match came from `phrases` and not merely from a vocabulary word in the same sentence.
+That distinction mattered - a first run looked like a pass because "der Krempel" matched in
+a sentence whose actual phrase had not been checked.
+
+### Where challenge content comes from, written down
+
+`How To/HowTo-challenge.md` gained a section saying the KOMMUNIKATION boxes are the point
+of a challenge: every box goes into `phrases` (which the measured half of the vocabulary
+score matches against the transcript) and gets its own entry in `tasks` (which the examiner
+grades 0-2), and both must be checked before shipping. That was the owner's instruction,
+and it belongs where the next session will read it rather than only in a chat log.
+
 ## State at the end of the day
 
 Deployed and working: Cloudflare Workers, D1, favorites, leaderboard, streak,
