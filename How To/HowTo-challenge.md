@@ -21,6 +21,7 @@ One object powers the whole flow:
   id: "fahrkarte",              // unique slug, used by byId and stored on every result
   category: "Reisen",           // menu filter chip
   level: "A2",                  // CEFR pill (A/B/C drives the color)
+  lektion: "Lektion 8",         // optional: course chapter pill, shown next to the level
   featured: true,               // optional: shows as the big hero card on Home
   locked: true,                 // optional: greys the row out, not startable
   photo: "https://…",           // header image (intro + menu row)
@@ -49,7 +50,7 @@ One object powers the whole flow:
 `stage === "intro"`. The user picked the scenario from Home; nothing has been sent yet.
 
 **What the user sees**
-- Header photo with the `category` and `level` pills.
+- Header photo with the `category` and `level` pills, plus the `lektion` pill when the scenario has one.
 - `title`, then `place` / `placeEn` as the subtitle.
 - **Dein Ziel / Goal** panel: `goal` + `tasks`. English (`goalEn`, `tasksEn`) sits blurred beside each line; the "Show English" toggle unblurs it.
 - **Wortschatz** panel: `vocab`, each with a star to save it to the "Review" repo.
@@ -158,7 +159,7 @@ prompt; the lesson's reading text belongs in a text (see `HowTo-text.md`), not h
 ## Recipe: add a new challenge
 
 1. Open `app/scenarios.js`, copy an existing object, give it a unique `id`.
-2. Fill the menu/header fields: `category`, `level`, `photo`, `title`, `desc`. Optionally `featured` / `locked`.
+2. Fill the menu/header fields: `category`, `level`, `photo`, `title`, `desc`. Optionally `featured` / `locked` / `lektion`.
 3. Write the briefing: `place`/`placeEn`, `goal`/`goalEn`, `tasks`/`tasksEn` (keep each `…En` array the same length and order as its German twin).
 4. Add `vocab` and `phrases` (each `{ de, en }`). Both optional; empty just hides the panel. Note these also feed the chat model as target language (the `de` side), not just the intro panels.
 5. Write the `system` prompt: role, place, "stay in character, German only, short sentences, help when stuck." Keep it about persona and tone; the mission and vocab (`level`, `goal`, `tasks`, `vocab`, `phrases`) are appended automatically by `buildSystem`, so you no longer need to restate them in prose.

@@ -1151,6 +1151,7 @@ export default function Home() {
                     <div className="hero-eyebrow">
                       Empfohlenes Szenario
                       <span className={`level level-${featured.level[0]}`}>{featured.level}</span>
+                      {featured.lektion && <span className="lektion">{featured.lektion}</span>}
                     </div>
                     <div className="hero-title">{featured.title}</div>
                     <div className="hero-sub">{featured.desc}</div>
@@ -1179,6 +1180,7 @@ export default function Home() {
                       <div className="row-sub">{s.desc}</div>
                     </div>
                     <div className="row-meta">
+                      {s.lektion && <span className="lektion">{s.lektion}</span>}
                       <span className={`level level-${s.level[0]}`}>{s.level}</span>
                       <span>{s.locked ? "Gesperrt" : s.category}</span>
                     </div>
@@ -1319,6 +1321,7 @@ export default function Home() {
           <div className="scene-tags">
             <span className="scene-cat">{scenario.category}</span>
             <span className={`level level-${scenario.level[0]}`}>{scenario.level}</span>
+            {scenario.lektion && <span className="lektion">{scenario.lektion}</span>}
           </div>
         </div>
       )}

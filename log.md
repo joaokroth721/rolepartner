@@ -901,3 +901,28 @@ Two things noted and not changed, because neither is a leak:
 Open: nothing in code. If the deployed Worker's secrets were ever set from a file that later
 left the machine, that is an account-side question this audit cannot see - `wrangler secret
 list` shows names only, by design.
+
+## Lektion pill on the four Kursbuch challenges
+
+`app/scenarios.js` gains an optional `lektion` field, set on the four scenarios that come
+from a Kursbuch chapter: `esstyp` / "Alles unter Kontrolle?" -> Lektion 8, `innereuhr` /
+"So tickt unsere innere Uhr" -> Lektion 9, `coaching` / "Erfolgreich scheitern" -> Lektion 10,
+`minimalismus` / "Weniger ist mehr" -> Lektion 11. The other three scenarios (`fahrkarte`,
+`restaurant`, `arzt`) are not from the book and carry no `lektion`.
+
+It renders in the three places a scenario already shows its metadata: the intro header pills,
+the catalog row meta, and the featured hero eyebrow. Every site guards on the field, so a
+scenario without it looks exactly as it did before.
+
+Stored as the full display string ("Lektion 8") rather than a number. A number would have
+needed a formatter at each of the three render sites to earn nothing: there is no sorting,
+filtering or arithmetic on it, and the string is what the pill shows. Rejected making it a
+filter chip alongside `category` for the same reason - four of seven scenarios have one, so
+a "Lektion" chip row would be mostly empty, and the user asked for a tag, not a facet.
+
+New `.lektion` CSS in `app/globals.css` copies the CEFR pill's geometry (same size, radius,
+padding) in neutral slate, so the two pills sit as a pair and the level keeps sole ownership
+of the A/B/C color coding. There is no dark-mode block in this stylesheet, so none was added.
+
+`npx next build` passes. `How To/HowTo-challenge.md` documents the field in the object
+template, the intro description, and the authoring checklist.

@@ -48,6 +48,9 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zum Kau
     id: "coaching",
     category: "Beruf",
     level: "B1",
+    // Optional: ties the scenario to a course chapter. Only the scenarios that belong to a
+    // Lektion carry it; the pill is skipped everywhere when the field is absent.
+    lektion: "Lektion 10",
     // picsum, like the reader's images: a seed always resolves, where a guessed Unsplash
     // id can 404 on the hero. Swap for a curated photo when there is one.
     photo: "https://picsum.photos/seed/coaching/600/400",
@@ -113,6 +116,7 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu eine
     id: "minimalismus",
     category: "Konsum",
     level: "B1",
+    lektion: "Lektion 11",
     photo: "https://picsum.photos/seed/minimalismus/600/400",
 
     title: "Weniger ist mehr",
@@ -176,6 +180,7 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu eine
     id: "innereuhr",
     category: "Wissenschaft",
     level: "B1",
+    lektion: "Lektion 9",
     photo: "https://picsum.photos/seed/innereuhr/600/400",
 
     title: "So tickt unsere innere Uhr",
@@ -262,6 +267,7 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zur Erf
     id: "esstyp",
     category: "Essen",
     level: "B1",
+    lektion: "Lektion 8",
     photo: "https://picsum.photos/seed/esstyp/600/400",
 
     title: "Alles unter Kontrolle?",

@@ -305,6 +305,16 @@ h1.title {
 .level-B { background: #fef3c7; color: #b45309; }
 .level-C { background: #ede9fe; color: #6d28d9; }
 
+/* ---- Lektion pill ---- */
+/* Same shape as the CEFR pill so the two sit together, in a neutral slate so the
+   level keeps carrying the color coding. Only scenarios with a `lektion` show it. */
+.lektion {
+  font-weight: 700; font-size: 12px; letter-spacing: 0.02em;
+  padding: 4px 9px; border-radius: 999px; white-space: nowrap;
+  background: #e2e8f0; color: #334155;
+}
+.hero-eyebrow .lektion { text-transform: none; letter-spacing: 0.02em; }
+
 /* ---- Buttons ---- */
 .btn {
   appearance: none;
