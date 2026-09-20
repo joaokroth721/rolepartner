@@ -736,3 +736,61 @@ buttons.
 **Not done here.** No TTS change, so the mouth is still unsynced to the words - that is the
 Tier 0 bargain and the gate to Tier 1 is still the paid-voice decision. Coaching has no art
 and the two locked scenarios have none either.
+
+---
+
+## 20.09.2026
+
+## Two challenges from the Kursbuch: Lektion 8 and Lektion 9
+
+Two new scenarios in `app/scenarios.js`, built the way `How To/HowTo-challenge.md`
+prescribes: the KOMMUNIKATION boxes of the lesson are the challenge, everything else
+is staging for them.
+
+**`innereuhr` - "So tickt unsere innere Uhr" (Wissenschaft, B1).** Lektion 9, Tagesrhythmus.
+The partner is Jule Bergmann, host of the radio show "Neues aus der Forschung"; the learner
+is the studio guest, like Sören Rasmussen on S. 43. The show's running order in the `system`
+prompt is what forces the four boxes in sequence: the guest's own Tageskurve (ein Schaubild
+beschreiben, S. 42), the study on light (Überraschung ausdrücken / Wissen wiedergeben, S. 43),
+the three Meldungen of which one is invented (Vermutungen äußern und begründen, S. 45), and
+shift work plus an invention against it (ein Problem darstellen / ein Produkt vorstellen, S. 45).
+Five tasks, one per move, because the examiner grades each task 0-2 and a skipped box has to cost.
+
+The lesson's grammar (adversative Zusammenhänge) is carried as **vocab**, not prose: `im Gegensatz
+zu` and `jedoch` are target words, so contrasting yourself with another sleep type is measured
+against the transcript instead of merely encouraged. The `system` prompt also demands the
+comparison out loud, so the partner asks for it rather than hoping for it.
+
+**`esstyp` - "Alles unter Kontrolle?" (Essen, B1).** Lektion 8, Essverhalten. The partner is
+Barbara from the Kolumne on S. 39, hosting dinner and weighing every ingredient. Two halves,
+matching the two KOMMUNIKATION boxes: reacting to her control (Verständnis, Unverständnis,
+Gleichgültigkeit, S. 40) and then arguing about controlling what you eat (Argumente und
+Gegenargumente nennen, Argumente einschränken, zustimmen, widersprechen, S. 41). The Zustandspassiv
+of S. 40-41 is not a task; Barbara simply narrates the table in it ("Die Eier sind von
+glücklichen Hühnern gelegt.", "Das Brot ist mit viel Liebe gebacken."), so the learner meets
+Passiv mit *von* und *durch* as input, where a task would have turned it into a grammar drill.
+The idioms of the Wörter box (S. 40) sit in `vocab` as the fixed pairs they are - `durch und durch`,
+`hin und wieder`, `kurz und gut`, `fix und fertig` - which is also the form that matches in a transcript.
+
+**Measured, not assumed** (`node app/scoring.selftest.mjs`, extended with both challenges):
+
+- every one of the 13 + 12 Kommunikation phrases registers from a sentence a learner would
+  really say, not from the template recited verbatim (the phrase matcher wants 60 percent of
+  the content words, so a filled-in gap still matches)
+- a run using the boxes outscores a bland one on the same judgement, and the bland run hits
+  zero targets - so the briefing is worth reading, in numbers
+- `im Gegensatz zu` and `jedoch` both register from one natural contrast sentence
+- `tasksEn` mirrors `tasks` in length for both
+- `npx next build` passes
+
+**Phrase wording is chosen for the matcher, not copied from the page.** Two rejections worth
+recording. Book templates with a slash (`Jede/r hat das Recht …`, `Ab … sinkt / fällt …`)
+tokenise with the slash attached, so they can never match; they are written out instead. And
+short templates whose words are all common produce false positives at the 60 percent threshold:
+`Das größte Hoch habe ich am …` would have matched a bare "Ich habe am Morgen Zeit" (3 of 5
+words), so it became `Mein größtes Hoch habe ich am …` (4 of 6 needed), which that sentence
+misses. Same reason `Soviel ich weiß, …` was extended to `Soviel ich weiß, hängt das mit … zusammen.`: on its own, a plain "ich weiß nicht" would have scored it.
+
+Open: neither challenge has `partner` art, so the conversation screen shows no illustration
+for them. Both use a `picsum` seed as the header photo, like `coaching` and `minimalismus`;
+a curated image would be better but nothing depends on it.

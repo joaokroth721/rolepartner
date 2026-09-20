@@ -196,6 +196,78 @@ const bland = computeScore({
 assert.ok(spoken.score > bland.score, `using the boxes must beat bland agreement (${spoken.score} vs ${bland.score})`);
 assert.equal(bland.targetsUsed.length, 0, "bland agreement hits none of the targets");
 
+// --- the two Lektion-8/9 challenges: every Kommunikation box has to register ---
+// "So tickt unsere innere Uhr" carries four boxes (Schaubild beschreiben, Überraschung
+// ausdrücken / Wissen wiedergeben, Vermutungen äußern, Problem und Produkt) and "Alles
+// unter Kontrolle?" carries the understanding and argument sets. A box only exists for
+// the learner if a sentence they would really say moves the number, so each line below
+// is a filled-in template, never the template recited verbatim.
+const boxChallenges = [
+  [
+    "innereuhr",
+    [
+      "Wie das Schaubild zeigt, bin ich am Morgen kaum leistungsfähig.",
+      "Mein größtes Hoch habe ich am späten Vormittag.",
+      "Ab 13 Uhr sinkt die Kurve, und das größte Tief kommt am frühen Nachmittag.",
+      "Überraschend war für mich vor allem, dass Licht die innere Uhr verschieben kann.",
+      "Mich hat überrascht, dass Schichtarbeit den Tagesrhythmus so stark stört.",
+      "Soviel ich weiß, hängt das mit unseren Genen zusammen.",
+      "Unbestritten ist auf jeden Fall, dass Tageslicht uns wach macht.",
+      "Ich könnte mir vorstellen, dass die dritte Meldung falsch ist, weil es keine solche Pille gibt.",
+      "Das kommt mir unglaubwürdig vor. Ich würde vermuten, dass die Brille erfunden ist.",
+      "Für viele ist es problematisch, wenn sie nachts arbeiten müssen.",
+      "Die Schichtarbeit macht vielen Menschen große Schwierigkeiten.",
+      "Bei meiner Erfindung handelt es sich um eine Lampe für den Nachtdienst.",
+      "Ein besonderes Merkmal ist, dass sie das blaue Licht herausfiltert.",
+    ],
+    ["Ja, morgens geht es mir gut.", "Das wusste ich nicht.", "Vielleicht die zweite.", "Nachts arbeiten ist hart.", "Eine Lampe wäre gut.", "Ja, genau."],
+  ],
+  [
+    "esstyp",
+    [
+      "Bis zu einem gewissen Grad kann ich verstehen, dass du auf deine Nährstoffe achtest.",
+      "Ich habe Verständnis dafür, dass dir gutes Essen wichtig ist.",
+      "Aber das geht mir einfach zu weit.",
+      "Man kann es auch übertreiben, finde ich.",
+      "Wenn ich ehrlich bin, ist mir das ziemlich egal.",
+      "Wenn sie es glücklich macht, soll sie weiter wiegen!",
+      "Ein wichtiges Argument dafür ist, dass man seinen Körper besser kennt.",
+      "Ein weiteres Argument dagegen ist, dass zu viel Kontrolle stresst.",
+      "Zwar hat sie recht, wenn sie sagt, dass Ernährung wichtig ist.",
+      "Das ist allerdings nicht ganz richtig, denn Genuss gehört auch dazu.",
+      "Da stimme ich voll und ganz zu.",
+      "Ich bin komplett dagegen.",
+    ],
+    ["Das Essen schmeckt gut.", "Du machst das schon richtig.", "Ich esse einfach, was da ist.", "Okay, verstehe.", "Ja, kann sein.", "Mal sehen."],
+  ],
+];
+
+const boxJudgement = {
+  goalCompletion: 3, taskResults: [2, 2, 2, 2, 2], grammar: 4, vocab: 4, interaction: 4, corrections: [],
+};
+for (const [id, spokenLines, blandLines] of boxChallenges) {
+  const sc = byId(id);
+  assert.ok(sc, `${id} exists`);
+  assert.equal(sc.tasks.length, sc.tasksEn.length, `${id}: tasksEn mirrors tasks`);
+  for (const phrase of sc.phrases) {
+    assert.ok(
+      spokenLines.some((line) => targetsUsed(sc, line).includes(phrase.de)),
+      `${id}: no sentence triggers the Kommunikation phrase "${phrase.de}"`
+    );
+  }
+  const usedBox = computeScore({ scenario: sc, messages: spokenLines.map((content) => ({ role: "user", content })), judgement: boxJudgement });
+  const skippedBox = computeScore({ scenario: sc, messages: blandLines.map((content) => ({ role: "user", content })), judgement: boxJudgement });
+  assert.ok(usedBox.score > skippedBox.score, `${id}: using the boxes must beat bland talk (${usedBox.score} vs ${skippedBox.score})`);
+  assert.equal(skippedBox.targetsUsed.length, 0, `${id}: bland talk hits none of the targets`);
+}
+
+// The adversative connectors are Lektion 9's grammar, carried as target vocab so that
+// contrasting yourself with another sleep type is measured, not merely encouraged.
+const uhr = byId("innereuhr");
+const contrasted = targetsUsed(uhr, "Im Gegensatz zu meiner Kollegin bin ich ein Langschläfer, abends bin ich jedoch fit.");
+assert.ok(contrasted.includes("im Gegensatz zu"), "the adversative expression registers from a real sentence");
+assert.ok(contrasted.includes("jedoch"), "the adversative connector registers from a real sentence");
+
 console.log("scoring self-check passed");
 console.log("  perfect:", best.score, best.breakdown);
 console.log("  same run ignoring the briefing:", ignoredBriefing.score);

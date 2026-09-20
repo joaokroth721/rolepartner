@@ -173,6 +173,173 @@ Stell am Ende die drei Methoden vor: Korb-Methode, Karton-Methode, Drei-Kisten-M
 Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu einer Entscheidung.`,
   },
   {
+    id: "innereuhr",
+    category: "Wissenschaft",
+    level: "B1",
+    photo: "https://picsum.photos/seed/innereuhr/600/400",
+
+    title: "So tickt unsere innere Uhr",
+    desc: "Sprich im Radiostudio über deinen Tagesrhythmus, Schlaftypen und eine Erfindung.",
+
+    place: "Du bist im Studio von @radio9 zu Gast, in der Sendung „Neues aus der Forschung“. Die Moderatorin Jule Bergmann sitzt dir gegenüber.",
+    placeEn: "You are a guest in the @radio9 studio, on the show \"News from research\". The host Jule Bergmann sits across from you.",
+    goal: "Beschreibe deinen Tagesrhythmus und stelle am Ende eine Erfindung gegen Schlafprobleme vor.",
+    goalEn: "Describe your daily rhythm and finish by presenting an invention against sleep problems.",
+    // One task per Kommunikation box of Lektion 9: ein Schaubild beschreiben (S. 42),
+    // Überraschung ausdruecken und Wissen wiedergeben (S. 43), Vermutungen äußern und
+    // begründen (S. 45), ein Problem darstellen und ein Produkt vorstellen (S. 45). The
+    // examiner grades each task 0-2, so skipping a box is what costs points.
+    tasks: [
+      "Beschreibe deine Tageskurve: wo das größte Hoch liegt und wann die Kurve sinkt",
+      "Sag, was dich an der Forschung zur inneren Uhr überrascht hat",
+      "Gib dein Wissen über Schlaftypen wieder und vergleiche dich mit anderen",
+      "Vermute, welche der drei Meldungen eine Falschmeldung ist, und begründe es",
+      "Stell ein Problem der Schichtarbeit dar und dann eine Erfindung dagegen",
+    ],
+    tasksEn: [
+      "Describe your daily curve: where the biggest peak is and when the curve falls",
+      "Say what surprised you about the research on the body clock",
+      "Relay what you know about sleep types and compare yourself with others",
+      "Guess which of the three news items is fake, and say why",
+      "Present a problem of shift work, then an invention that answers it",
+    ],
+
+    vocab: [
+      { de: "die innere Uhr", en: "the body clock" },
+      { de: "der Tagesrhythmus", en: "the daily rhythm" },
+      { de: "das Schaubild", en: "the chart, the diagram" },
+      { de: "der Frühaufsteher", en: "the early riser" },
+      { de: "der Langschläfer", en: "the late sleeper" },
+      { de: "leistungsfähig", en: "able to perform, productive" },
+      { de: "verschlafen", en: "to oversleep" },
+      { de: "die Schichtarbeit", en: "shift work" },
+      { de: "das Tageslicht", en: "daylight" },
+      { de: "die Falschmeldung", en: "the fake news item" },
+      { de: "die Erfindung", en: "the invention" },
+      // The lesson's grammar point (adversative Zusammenhänge) sits in the vocab list on
+      // purpose: as target words they are measured against the transcript, so contrasting
+      // yourself with another sleep type earns points instead of only sounding good.
+      { de: "im Gegensatz zu", en: "in contrast to" },
+      { de: "jedoch", en: "however" },
+    ],
+    // The four Kommunikation boxes of the lesson, in the order the tasks ask for them.
+    // These are also the target phrases the score measures against the transcript, so
+    // saying them is worth points and not only style.
+    phrases: [
+      { de: "Wie das Schaubild zeigt, …", en: "As the chart shows, …" },
+      { de: "Mein größtes Hoch habe ich am …", en: "My biggest peak is in the …" },
+      { de: "Ab … sinkt die Kurve, und das größte Tief kommt am …", en: "From … the curve falls, and the biggest low comes in the …" },
+      { de: "Überraschend war für mich vor allem, dass …", en: "What surprised me most was that …" },
+      { de: "Mich hat überrascht, dass …", en: "It surprised me that …" },
+      { de: "Soviel ich weiß, hängt das mit … zusammen.", en: "As far as I know, that has to do with …" },
+      { de: "Unbestritten ist auf jeden Fall, dass …", en: "What is undisputed in any case is that …" },
+      { de: "Ich könnte mir vorstellen, dass …, weil …", en: "I could imagine that …, because …" },
+      { de: "Das kommt mir unglaubwürdig vor. Ich würde vermuten, dass …", en: "That seems implausible to me. I would guess that …" },
+      { de: "Für viele ist es problematisch, wenn …", en: "For many people it is a problem when …" },
+      { de: "… macht vielen Menschen große Schwierigkeiten.", en: "… causes many people big difficulties." },
+      { de: "Bei … handelt es sich um …", en: "… is a …" },
+      { de: "Ein besonderes Merkmal ist, dass …", en: "A special feature is that …" },
+    ],
+
+    system: `Du bist Jule Bergmann, Moderatorin der Radiosendung „Neues aus der Forschung“ auf @radio9.
+Der Nutzer übt Deutsch und ist heute dein Studiogast zum Thema innere Uhr.
+Bleib immer in der Rolle. Sprich nur Deutsch, in kurzen, natürlichen Sätzen (max. 2 Sätze).
+Du bist wach, freundlich und neugierig und moderierst zügig: eine Frage, dann Nachhaken.
+Führe die Sendung in dieser Reihenfolge:
+1. die Tageskurve des Gastes (frag nach Uhrzeiten: "Wann genau steigt Ihre Kurve?"),
+2. die Studie von Dr. Sabine Möllenkamp über Licht und Schlaftypen (frag, was überrascht hat),
+3. Schlaftypen: Frühaufsteher, Langschläfer, Normaltyp (verlange einen Vergleich mit anderen Menschen),
+4. drei Meldungen aus der Wissenschaft, die du selbst vorliest: ein Haus aus Glas auf Island,
+   eine Spezialbrille gegen blaues Licht, eine Pille gegen Müdigkeit statt Schlafmittel.
+   Sag, eine davon sei erfunden, und lass den Gast vermuten und begründen.
+5. Schichtarbeit: frag nach dem Problem und danach nach einer eigenen Erfindung dagegen.
+Akzeptiere kein bloßes "morgens bin ich fit": frag nach Hoch, Tief und Uhrzeit.
+Widersprich dem Gast mindestens einmal freundlich ("Licht ändert doch nichts an den Genen."),
+damit er sein Wissen begründet statt nur zuzustimmen.
+Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zur Erfindung.`,
+  },
+  {
+    id: "esstyp",
+    category: "Essen",
+    level: "B1",
+    photo: "https://picsum.photos/seed/esstyp/600/400",
+
+    title: "Alles unter Kontrolle?",
+    desc: "Iss bei einer Freundin, die jede Zutat wiegt, und sag, was du von ihrer Kontrolle hältst.",
+
+    place: "Du bist bei deiner Freundin Barbara zum Abendessen. Sie wiegt jede Zutat, kennt jeden Nährwert und erzählt begeistert davon.",
+    placeEn: "You are having dinner at your friend Barbara's. She weighs every ingredient, knows every nutritional value, and talks about it with enthusiasm.",
+    goal: "Sag Barbara, was du von ihrer Kontrolle über das Essen hältst, und begründe deine Meinung mit Argumenten.",
+    goalEn: "Tell Barbara what you think of her control over food, and back your opinion with arguments.",
+    // One task per Kommunikation box of Lektion 8: Verständnis, Unverständnis und
+    // Gleichgültigkeit ausdrücken (S. 40), Argumente und Gegenargumente nennen,
+    // Argumente einschränken, zustimmen und widersprechen (S. 41). The examiner grades
+    // each task 0-2, so a polite "ja, stimmt" through the whole dinner costs points.
+    tasks: [
+      "Sag, welcher Esstyp du bist, und beschreibe deine Essgewohnheiten",
+      "Drück Verständnis für Barbaras Kontrolle aus",
+      "Drück an einer Stelle Unverständnis oder Gleichgültigkeit aus",
+      "Nenne ein Argument und ein Gegenargument zum Kontrollieren des Essverhaltens",
+      "Schränke Barbaras Argument ein und sag klar, ob du zustimmst oder widersprichst",
+    ],
+    tasksEn: [
+      "Say which eating type you are, and describe your eating habits",
+      "Express understanding for Barbara's control",
+      "At some point express a lack of understanding, or indifference",
+      "Name an argument and a counter-argument about controlling what you eat",
+      "Qualify Barbara's argument and say clearly whether you agree or disagree",
+    ],
+
+    vocab: [
+      { de: "der Esstyp", en: "the eating type" },
+      { de: "der Genießer", en: "the epicure, the one who savours food" },
+      { de: "der Frustesser", en: "the comfort eater" },
+      { de: "der Gesundesser", en: "the health eater" },
+      { de: "die Essgewohnheiten", en: "the eating habits" },
+      { de: "die Nährstoffe", en: "the nutrients" },
+      { de: "Kalorien zählen", en: "to count calories" },
+      { de: "die Selbstoptimierung", en: "self-optimisation" },
+      { de: "sich bewusst ernähren", en: "to eat consciously" },
+      // The idioms from the Wörter box (S. 40, Aufgabe 5); single words and fixed pairs,
+      // so they register in the transcript when the student really uses them.
+      { de: "durch und durch", en: "through and through" },
+      { de: "hin und wieder", en: "now and then" },
+      { de: "kurz und gut", en: "in short" },
+      { de: "fix und fertig", en: "exhausted, worn out" },
+    ],
+    // The Kommunikation boxes of the lesson: Verständnis, Unverständnis, Gleichgültigkeit
+    // (S. 40) and the argument set of the Kommentar (S. 41). These are the target phrases
+    // the score measures against the transcript, so saying them is worth points.
+    phrases: [
+      { de: "Bis zu einem gewissen Grad kann ich verstehen, dass …", en: "Up to a point I can understand that …" },
+      { de: "Ich habe Verständnis dafür, dass …", en: "I do have sympathy for the fact that …" },
+      { de: "Das geht einfach zu weit.", en: "That simply goes too far." },
+      { de: "Man kann es auch übertreiben.", en: "You can also overdo it." },
+      { de: "Wenn ich ehrlich bin, ist mir das ziemlich egal.", en: "If I am honest, I do not really care." },
+      { de: "Wenn sie es glücklich macht!", en: "If it makes her happy!" },
+      { de: "Ein wichtiges Argument dafür ist, dass …", en: "An important argument for it is that …" },
+      { de: "Ein weiteres Argument dagegen ist, dass …", en: "A further argument against it is that …" },
+      { de: "Zwar hat sie recht, wenn sie sagt, dass …", en: "She is right when she says that …" },
+      { de: "Das ist allerdings nicht ganz richtig, denn …", en: "That is however not quite right, because …" },
+      { de: "Stimme voll und ganz zu.", en: "I agree completely." },
+      { de: "Bin komplett dagegen.", en: "I am completely against it." },
+    ],
+
+    system: `Du bist Barbara, eine Freundin des Nutzers, und du hast ihn zum Abendessen eingeladen.
+Der Nutzer übt Deutsch und sitzt mit dir am Tisch.
+Bleib immer in der Rolle. Sprich nur Deutsch, in kurzen, natürlichen Sätzen (max. 2 Sätze).
+Du hast dein Essen total im Griff: du wiegst die Zutaten, zählst Kalorien, kennst jeden Nährwert
+und kaufst nur bio, fair und regional. Du bist warmherzig und völlig überzeugt, nie aggressiv.
+Erzähle stolz, was auf dem Tisch steht ("Der Tisch ist schon gedeckt.", "Die Eier sind von
+glücklichen Hühnern gelegt.", "Das Brot ist mit viel Liebe gebacken."), damit der Nutzer
+auf Zustandspassiv und Passiv mit von und durch trifft.
+Frag den Nutzer früh, welcher Esstyp er ist: Genießer, Zweckesser, Frustesser oder Gesundesser.
+Vertritt klare Thesen ("Wer seinen Körper kennt, lebt länger." / "Bauchgefühl ist keine Ernährung."),
+damit der Nutzer Argumente nennen, einschränken, zustimmen oder widersprechen muss.
+Nimm ein bloßes "ja, stimmt" nicht an: frag dann nach ("Und was spricht dagegen?").
+Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu seinem klaren Urteil.`,
+  },
+  {
     id: "restaurant",
     category: "Essen",
     level: "A2",
