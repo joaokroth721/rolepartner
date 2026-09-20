@@ -831,3 +831,73 @@ misses. Same reason `Soviel ich weiß, …` was extended to `Soviel ich weiß, h
 Open: neither challenge has `partner` art, so the conversation screen shows no illustration
 for them. Both use a `picsum` seed as the header photo, like `coaching` and `minimalismus`;
 a curated image would be better but nothing depends on it.
+
+## Security audit: are the Google OAuth credentials retrievable?
+
+Asked to check whether the Google OAuth credentials can be recovered by any route. Audited,
+and the answer is no - with one gap in the fence, which this commit closes.
+
+**Nothing is leaking today.** What was checked, and what it showed:
+
+- **Git history, every blob.** Walked all objects on all refs (`git rev-list --objects --all`,
+  `git cat-file` each blob) against patterns for a Google client secret (`GOCSPX-…`), a client
+  id (`…apps.googleusercontent.com`), OAuth access and refresh tokens (`ya29.…`, `1//…`), an
+  OpenAI key (`sk-…`), a Google API key (`AIza…`) and PEM private keys. One hit in total:
+  `phc_xxxxxxxxxxxx` in `plan_posthog.md`, a placeholder. `-S` searches for `GOCSPX`,
+  `apps.googleusercontent.com` and `AUTH_SECRET=` found only documentation and empty
+  assignments. No secret has ever been committed, so there is nothing to rotate and no
+  history to rewrite.
+- **The client bundle.** `GOOGLE_CLIENT_SECRET` is read in exactly one place, `app/auth.js`,
+  which is imported only by `app/db.js`, `app/admin.js` and the `[...nextauth]` route - all
+  server. The three `"use client"` files import `next-auth/react` and never `./auth`.
+  Grepping `.next/static` for the values found nothing; the one chunk that contains the
+  string `ADMIN_EMAILS` contains it as a table label on the admin page, not as a value. No
+  source maps are emitted, so the server code is not reconstructable from the assets either.
+  Next only inlines `NEXT_PUBLIC_*`, and the only two are the PostHog key and host, which are
+  publishable by design.
+- **The runtime.** No `callbacks` in `app/auth.js`, so the session is Auth.js's default JWT:
+  name, email, image. The Google `access_token` / `refresh_token` / `id_token` are never put
+  in the token, never returned by `/api/auth/session`, and no table has a column for them
+  (the `ai_tokens` "tokens" are billing counters). Unexpected exceptions go through `oops()`,
+  which logs the stack to the Worker and returns a fixed German sentence, so a stranger
+  cannot provoke a stack trace that names the configuration.
+- **What is served publicly.** `public/` is four SVGs. `.open-next/assets` does not exist in
+  this tree. `.dev.vars` and `.env.local` are absent from disk and untracked.
+
+**The gap: `.gitignore` named files, not shapes.** The old list was `.env`, `.env*.local`,
+`.env.local`, `.dev.vars`. That covers the files that happen to exist right now and misses
+their neighbours: `.env.production`, `.dev.vars.production` and `.dev.vars.local` were all
+committable, as were `client_secret_*.json` and `service-account.json`, the names the Google
+console and gcloud hand you on download. The repo is **public**
+(`github.com/joaokroth721/rolepartner`), so any one of those is the whole OAuth client the
+moment it is created - and `.env.example` actively points at `.env.production` as a place to
+put the build-time PostHog key, which is exactly the file a server secret gets added to by
+mistake later.
+
+Fixed by inverting the default: `.env*` and `.dev.vars*` are ignored, with `!.env.example`
+and `!.dev.vars.example` re-admitting the two that are meant to be tracked, plus `*.pem`,
+`*.key`, `*.p12` and the `*client_secret*.json` / `*service-account*.json` /
+`*credentials*.json` shapes. Verified with `git check-ignore` over thirteen filenames: all
+seven env spellings and all four credential names ignored, both examples still tracked, and
+`app/page.js` unaffected. The two example files remain in `git ls-files`.
+
+Deliberately not blanket-committing `.env.production`: it is now ignored like the rest, and
+if the PostHog key ever needs to ship in the build it goes in with `git add -f` after being
+read. The friction is the point on a public repo - a file that holds one publishable key is
+the file someone later pastes a client secret into.
+
+Two things noted and not changed, because neither is a leak:
+
+- `trustHost: true` in `app/auth.js` means Auth.js builds the callback URL from the `Host`
+  header. This is required on Workers and is not exploitable for credential theft here:
+  Google validates `redirect_uri` against the registered list, so a forged host produces a
+  URI Google refuses. Left as is.
+- `ADMIN_EMAILS=joao.kroth7@gmail.com` is committed in both example files and therefore
+  public. It is not a credential - the gate in `app/admin.js` needs a Google-verified session
+  for that address, so knowing it grants nothing - but it does tell an attacker which single
+  account to phish for the admin dashboard. Worth knowing; not worth a placeholder, since the
+  value being concrete is what makes "How To/HowTo-admin.md" followable.
+
+Open: nothing in code. If the deployed Worker's secrets were ever set from a file that later
+left the machine, that is an account-side question this audit cannot see - `wrangler secret
+list` shows names only, by design.

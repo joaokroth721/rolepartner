@@ -2,15 +2,34 @@
 /.next
 /out
 /build
-.env
-.env*.local
 .DS_Store
-*.pem
 npm-debug.log*
 
 # Cloudflare (OpenNext)
 /.open-next
 /.wrangler
-.dev.vars
 cloudflare-env.d.ts
-.env.local
+
+# Secrets.
+#
+# Deny by name, then re-admit the two example files, because the old list named only the
+# exact files that existed (.env, .env*.local, .dev.vars) and let every neighbouring
+# spelling through: .env.production, .dev.vars.local and .dev.vars.production were all
+# committable. On a public repo one such file is the whole Google OAuth client, so the
+# default has to be "ignored" and the exception has to be spelled out.
+.env*
+!.env.example
+.dev.vars*
+!.dev.vars.example
+
+# NEXT_PUBLIC_* is inlined at build time, so a build-time env file (.env.production) is the
+# one that may legitimately need committing. It stays ignored here: commit it with
+# `git add -f` after reading it, and never put a server secret in it.
+
+# Credential files, which arrive already named by whoever exported them.
+*.pem
+*.key
+*.p12
+*client_secret*.json
+*service-account*.json
+*credentials*.json
