@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useSession, signIn, signOut } from "next-auth/react";
 import posthog from "posthog-js";
 import { scenarios } from "./scenarios";
@@ -40,6 +41,26 @@ function AuthButton() {
     >
       {src ? <img className="avatar" src={src} alt="" /> : <div className="avatar" aria-hidden />}
     </button>
+  );
+}
+
+// Full-screen gate shown until a Google session exists. Everything else (identity by email,
+// favorites/progress in D1, staying logged in via the JWT cookie) is already handled server-side.
+function LoginScreen({ loading }) {
+  return (
+    <div className="login">
+      <div className="login-card">
+        <div className="brand login-brand">
+          RolePartner <span className="brand-tag">DE</span>
+        </div>
+        <p className="login-sub">
+          Melde dich an, um zu üben. Dein Fortschritt und deine Favoriten bleiben mit deinem Konto verknüpft.
+        </p>
+        <button className="btn btn-primary login-btn" disabled={loading} onClick={() => signIn("google")}>
+          {loading ? "..." : "Mit Google anmelden"}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -104,6 +125,70 @@ function MedalGoals({ score }) {
   );
 }
 
+// The mission: the goal and the briefing's tasks, German first with the English blurred
+// until asked for. Rendered in the briefing and again during the conversation, because
+// the goal is the first thing that slips once the talking starts and scrolling back to
+// the intro would mean leaving the chat.
+function GoalPanel({ scenario, showEn, onToggleEn, collapsible = false }) {
+  const toggle = (
+    <button
+      className="brief-toggle"
+      onClick={(e) => {
+        // Inside a <summary> this click would also fold the panel away.
+        e.preventDefault();
+        e.stopPropagation();
+        onToggleEn();
+      }}
+    >
+      {showEn ? "Hide English" : "Show English"}
+    </button>
+  );
+
+  const body = (
+    <>
+      <ul className="vocab-list">
+        <li className="goal-row">
+          <span className="vocab-de">{scenario.goal}</span>
+          <span className={`vocab-en ${showEn ? "" : "brief-blur"}`}>{scenario.goalEn}</span>
+        </li>
+      </ul>
+      <div className="brief-label" style={{ marginTop: 16 }}>Üben / Practice</div>
+      <ul className="vocab-list">
+        {scenario.tasks.map((t, i) => (
+          <li key={i}>
+            <span className="vocab-de">{t}</span>
+            <span className={`vocab-en ${showEn ? "" : "brief-blur"}`}>{scenario.tasksEn[i]}</span>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
+
+  // During the conversation the transcript is what the screen is for, so the panel can be
+  // folded away; in the briefing there is nothing to get out of the way of.
+  if (collapsible) {
+    return (
+      <details className="panel brief-section goal-recall" open>
+        <summary className="brief-head">
+          <span className="brief-label">Dein Ziel / Goal</span>
+          {toggle}
+        </summary>
+        {body}
+      </details>
+    );
+  }
+
+  return (
+    <div className="panel brief-section">
+      <div className="brief-head">
+        <div className="brief-label">Dein Ziel / Goal</div>
+        {toggle}
+      </div>
+      {body}
+    </div>
+  );
+}
+
 function StarButton({ active, onClick }) {
   return (
     <button className={`star ${active ? "on" : ""}`} onClick={onClick} aria-pressed={active} title="Merken">
@@ -111,6 +196,23 @@ function StarButton({ active, onClick }) {
         <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.7l5.9-.9z" strokeLinejoin="round" />
       </svg>
     </button>
+  );
+}
+
+// The talking partner on the conversation screen (plan_video.md, Tier 0). The art is a flat
+// SVG drawn without a mouth; the mouth is this overlay, placed from the scenario's percent
+// anchor, so one component serves every illustration. Scenarios without `partner` render
+// nothing here — two of them are locked and one has no art yet.
+// Decorative on purpose: it carries no information the transcript does not already say, so
+// it is hidden from assistive tech rather than announcing a drawing on every turn.
+function PartnerStage({ partner, speaking }) {
+  if (!partner?.art) return null;
+  const { x = 50, y = 50, w = 7 } = partner.mouth || {};
+  return (
+    <div className={`partner ${speaking ? "speaking" : ""}`} aria-hidden="true">
+      <img className="partner-art" src={partner.art} alt="" />
+      <span className="partner-mouth" style={{ left: `${x}%`, top: `${y}%`, width: `${w}%` }} />
+    </div>
   );
 }
 
@@ -605,6 +707,7 @@ function TextReader({ text, favKeys, onToggleFav, onBack }) {
 
 // ponytail: Web Speech API é nativo mas só confiável no Chrome. Trocar por Realtime API se a voz robótica incomodar.
 export default function Home() {
+  const { status: authStatus } = useSession(); // "loading" | "authenticated" | "unauthenticated"
   const [scenario, setScenario] = useState(null);
   const [stage, setStage] = useState("intro"); // intro | chat | leaderboard | feedback
   const [showEn, setShowEn] = useState(false); // intro em inglês?
@@ -626,6 +729,7 @@ export default function Home() {
   const [me, setMe] = useState(null); // { id, email, anonymous, streak } from /api/me
   const [favorites, setFavorites] = useState([]); // favorited items, loaded from D1
   const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false); // partner voice running; drives the mouth
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const recRef = useRef(null);
@@ -669,9 +773,10 @@ export default function Home() {
     });
   }, [screen, scenario?.id, openText?.id]);
 
-  // Who am I (anonymous id on first visit, Google account once login is configured) and
-  // what have I saved. Both come from D1; nothing is kept in the browser any more.
+  // Who am I and what have I saved. Both come from D1; nothing is kept in the browser any more.
+  // Only fires once signed in: the app is gated below, so there is no anonymous bootstrap.
   useEffect(() => {
+    if (authStatus !== "authenticated") return;
     let alive = true;
     (async () => {
       try {
@@ -689,7 +794,7 @@ export default function Home() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [authStatus]);
 
   // The history is fetched the first time the Verlauf view is opened, never in the
   // bootstrap effect above: that one runs on every page load and its calls must stay
@@ -819,7 +924,7 @@ export default function Home() {
       });
     }
     recRef.current?.abort?.();
-    speechSynthesis.cancel();
+    stopSpeaking();
     setScenario(null);
     setListening(false);
     setBusy(false);
@@ -834,7 +939,20 @@ export default function Home() {
   function speak(text) {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "de-DE";
+    // The mouth follows the utterance's own lifecycle, not a timer: only these events know
+    // when the OS voice really starts and stops. Browsers disagree on what a cancel() fires
+    // (end in Chrome, error elsewhere), so both close the mouth.
+    u.onstart = () => setSpeaking(true);
+    u.onend = () => setSpeaking(false);
+    u.onerror = () => setSpeaking(false);
     speechSynthesis.speak(u);
+  }
+
+  // Every exit from the conversation goes through here: relying on the utterance events
+  // alone would leave the mouth moving if a cancel() silences a voice that never started.
+  function stopSpeaking() {
+    speechSynthesis.cancel();
+    setSpeaking(false);
   }
 
   async function send(userText) {
@@ -854,7 +972,7 @@ export default function Home() {
 
   async function endConversation() {
     recRef.current?.abort?.();
-    speechSynthesis.cancel();
+    stopSpeaking();
     setBusy(true);
     setError("");
     const turns = {
@@ -926,9 +1044,12 @@ export default function Home() {
     setTab(t);
     setOpenText(null);
     setOpenSession(null);
-    speechSynthesis.cancel();
+    stopSpeaking();
     if (scenario) back();
   };
+
+  // Login gate: nothing renders until a Google session exists.
+  if (authStatus !== "authenticated") return <LoginScreen loading={authStatus === "loading"} />;
 
   const topbar = (
     <header className="topbar">
@@ -948,6 +1069,13 @@ export default function Home() {
           </button>
         </nav>
         <div className="topbar-right">
+          {/* Only shown to an admin, and only as a shortcut: /admin and /api/admin both
+              re-check the allow list server-side, so a forged flag here opens nothing. */}
+          {me?.admin && (
+            <Link className="nav-item" href="/admin">
+              Admin
+            </Link>
+          )}
           <span className="streak" title="Serie">{me?.streak ?? 0} Tage</span>
           <AuthButton />
         </div>
@@ -1048,6 +1176,7 @@ export default function Home() {
                     <div className="hero-eyebrow">
                       Empfohlenes Szenario
                       <span className={`level level-${featured.level[0]}`}>{featured.level}</span>
+                      {featured.lektion && <span className="lektion">{featured.lektion}</span>}
                     </div>
                     <div className="hero-title">{featured.title}</div>
                     <div className="hero-sub">{featured.desc}</div>
@@ -1076,8 +1205,9 @@ export default function Home() {
                       <div className="row-sub">{s.desc}</div>
                     </div>
                     <div className="row-meta">
+                      <span className="row-cat">{s.locked ? "Gesperrt" : s.category}</span>
                       <span className={`level level-${s.level[0]}`}>{s.level}</span>
-                      <span>{s.locked ? "Gesperrt" : s.category}</span>
+                      {s.lektion && <span className="lektion">{s.lektion}</span>}
                     </div>
                   </button>
                 ))}
@@ -1216,6 +1346,7 @@ export default function Home() {
           <div className="scene-tags">
             <span className="scene-cat">{scenario.category}</span>
             <span className={`level level-${scenario.level[0]}`}>{scenario.level}</span>
+            {scenario.lektion && <span className="lektion">{scenario.lektion}</span>}
           </div>
         </div>
       )}
@@ -1228,29 +1359,7 @@ export default function Home() {
             {showEn ? scenario.placeEn : scenario.place}
           </p>
 
-          <div className="panel brief-section">
-            <div className="brief-head">
-              <div className="brief-label">Dein Ziel / Goal</div>
-              <button className="brief-toggle" onClick={() => setShowTr((v) => !v)}>
-                {showTr ? "Hide English" : "Show English"}
-              </button>
-            </div>
-            <ul className="vocab-list">
-              <li className="goal-row">
-                <span className="vocab-de">{scenario.goal}</span>
-                <span className={`vocab-en ${showTr ? "" : "brief-blur"}`}>{scenario.goalEn}</span>
-              </li>
-            </ul>
-            <div className="brief-label" style={{ marginTop: 16 }}>Üben / Practice</div>
-            <ul className="vocab-list">
-              {scenario.tasks.map((t, i) => (
-                <li key={i}>
-                  <span className="vocab-de">{t}</span>
-                  <span className={`vocab-en ${showTr ? "" : "brief-blur"}`}>{scenario.tasksEn[i]}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <GoalPanel scenario={scenario} showEn={showTr} onToggleEn={() => setShowTr((v) => !v)} />
 
           {scenario.vocab?.length > 0 && (
             <div className="panel brief-section">
@@ -1309,6 +1418,7 @@ export default function Home() {
       {stage === "chat" && (
         <>
           <p className="subtitle">{scenario.desc}</p>
+          <PartnerStage partner={scenario.partner} speaking={speaking} />
           <div className="btn-row">
             <button className="btn btn-primary" onClick={listen} disabled={listening || busy}>
               {listening ? "Höre zu…" : busy ? "…" : "Sprechen"}
@@ -1319,6 +1429,14 @@ export default function Home() {
           </div>
 
           {error && <p className="error">{error}</p>}
+
+          {/* After the controls, so "Sprechen" stays reachable without scrolling. */}
+          <GoalPanel
+            scenario={scenario}
+            showEn={showTr}
+            onToggleEn={() => setShowTr((v) => !v)}
+            collapsible
+          />
 
           <div className="chat">
             {messages.map((m, i) => {

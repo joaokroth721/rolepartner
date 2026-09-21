@@ -158,7 +158,8 @@ img.avatar { object-fit: cover; }
 .row-text { flex: 1; min-width: 0; }
 .row-title { font-weight: 700; font-size: 16px; }
 .row-sub { color: var(--muted); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.row-meta { color: var(--muted); font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+.row-meta { color: var(--muted); font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.row-cat { white-space: nowrap; }
 
 @media (max-width: 640px) {
   .hero { flex-direction: column; align-items: flex-start; }
@@ -305,6 +306,16 @@ h1.title {
 .level-B { background: #fef3c7; color: #b45309; }
 .level-C { background: #ede9fe; color: #6d28d9; }
 
+/* ---- Lektion pill ---- */
+/* Same shape as the CEFR pill so the two sit together, in a neutral slate so the
+   level keeps carrying the color coding. Only scenarios with a `lektion` show it. */
+.lektion {
+  font-weight: 700; font-size: 12px; letter-spacing: 0.02em;
+  padding: 4px 9px; border-radius: 999px; white-space: nowrap;
+  background: #e2e8f0; color: #334155;
+}
+.hero-eyebrow .lektion { text-transform: none; letter-spacing: 0.02em; }
+
 /* ---- Buttons ---- */
 .btn {
   appearance: none;
@@ -355,6 +366,54 @@ h1.title {
 }
 .bubble.assistant { align-self: flex-start; background: var(--surface-2); border-bottom-left-radius: 4px; }
 .bubble.user { align-self: flex-end; background: var(--user-bubble); border-bottom-right-radius: 4px; }
+
+/* ---- Talking partner (conversation screen) ---- */
+/* Height is capped, not only width: on a phone the Sprechen / Gespräch beenden buttons sit
+   right under the picture and must stay above the fold. */
+.partner {
+  position: relative;
+  width: 100%;
+  max-width: min(320px, 46vh);
+  aspect-ratio: 4 / 3;
+  margin: 14px auto 4px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--surface-2);
+}
+/* Wider screens have the room for the art at its drawn size. */
+@media (min-width: 700px) { .partner { max-width: min(400px, 46vh); } }
+.partner-art { display: block; width: 100%; height: 100%; object-fit: contain; }
+/* The art is drawn with no mouth; this is it. Position comes from the scenario (percent of
+   the art's box), the height from the aspect ratio, so one rule fits every illustration. */
+.partner-mouth {
+  position: absolute;
+  aspect-ratio: 5 / 1;
+  border-radius: 999px;
+  background: #7f1d1d;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+}
+/* Pure CSS while the voice runs: a keyframe on a transform costs nothing on a phone, where
+   re-rendering React several times a second to flap a mouth would. */
+.partner.speaking .partner-mouth { animation: mouthTalk 0.42s ease-in-out infinite; }
+.partner.speaking { animation: partnerPulse 1.8s ease-in-out infinite; }
+
+@keyframes mouthTalk {
+  0%   { transform: translate(-50%, -50%) scale(1, 1); }
+  25%  { transform: translate(-50%, -50%) scale(0.88, 3.6); }
+  50%  { transform: translate(-50%, -50%) scale(1, 1.6); }
+  75%  { transform: translate(-50%, -50%) scale(0.92, 2.6); }
+  100% { transform: translate(-50%, -50%) scale(1, 1); }
+}
+@keyframes partnerPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.015); }
+}
+
+/* Keep the illustration, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .partner.speaking, .partner.speaking .partner-mouth { animation: none; }
+}
 
 /* ---- Evaluation (feedback screen) ---- */
 :root { --good: #16a34a; --ok: #2563eb; --low: #d97706; }
@@ -601,3 +660,160 @@ h1.title {
   60% { opacity: 1; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent); }
   100% { opacity: 1; transform: none; box-shadow: 0 0 0 0 transparent; }
 }
+
+/* ---- Admin dashboard (/admin) ---- */
+/* Its own block, and every class is prefixed `a-`, so nothing here can reach the learner
+   app by accident. Shared pieces (.panel, .btn, .chat, .brief-label) are reused as they are. */
+
+/* The learner topbar pins .brand to the viewport edge and lets it overlap the nav below
+   ~1000px. The admin bar carries five tabs and a link, so it lays all three parts out in
+   one flex row and wraps instead of overlapping. */
+.a-topbar {
+  max-width: 1200px; margin: 0 auto; padding: 14px 24px;
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+}
+.a-topbar .brand { position: static; transform: none; }
+.a-topbar .nav { flex-wrap: wrap; }
+.a-back { margin-left: auto; }
+
+/* Wider than the learner app: these tables have seven columns, not two. */
+.a-main { max-width: 1200px; }
+
+.a-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.a-stat {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px;
+}
+.a-stat-num { font-size: 30px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1; }
+.a-stat-label { color: var(--muted); font-size: 13px; font-weight: 600; margin-top: 6px; }
+.a-stat-sub { color: var(--muted); font-size: 12px; margin-top: 2px; opacity: 0.85; }
+
+/* Charts: one measure, one hue, one axis. The value of each day is on hover, and the
+   highest is named in the header, rather than a number printed over every bar. */
+.a-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.a-chart {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px;
+}
+.a-chart-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.a-chart-head .brief-label { margin: 0; }
+.a-chart-peak { color: var(--muted); font-size: 12px; font-weight: 600; }
+.a-chart-plot {
+  display: flex; align-items: flex-end; gap: 2px;
+  height: 92px; margin-top: 14px;
+  border-bottom: 1px solid var(--border); /* the baseline: a day with no traffic draws no bar */
+}
+.a-chart-col { position: relative; flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.a-chart-bar { width: 100%; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 0; }
+.a-chart-col:hover .a-chart-bar { background: var(--accent-hover); }
+.a-chart-tip {
+  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+  margin-bottom: 6px; white-space: nowrap; pointer-events: none; opacity: 0;
+  background: var(--text); color: var(--surface);
+  font-size: 12px; font-weight: 600; padding: 4px 8px; border-radius: 6px;
+  transition: opacity 0.12s;
+}
+.a-chart-col:hover .a-chart-tip { opacity: 1; }
+.a-chart-axis { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; margin-top: 6px; }
+
+.a-table-wrap { overflow-x: auto; }
+.a-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.a-table th, .a-table td { text-align: left; padding: 9px 16px 9px 0; vertical-align: top; }
+.a-table th:first-child, .a-table td:first-child { padding-left: 0; }
+.a-table th:last-child, .a-table td:last-child { padding-right: 0; }
+.a-table th {
+  color: var(--muted); font-size: 12px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.a-table td { border-bottom: 1px solid var(--border); }
+.a-table tr:last-child td { border-bottom: 0; }
+.a-table .num { text-align: right; padding-left: 16px; font-variant-numeric: tabular-nums; }
+.a-table .btn { padding: 4px 12px; font-size: 13px; }
+
+.a-empty { color: var(--muted); margin: 8px 0 0; }
+.a-muted { color: var(--muted); }
+.a-note { color: var(--muted); font-size: 13px; line-height: 1.6; margin: 14px 0 0; }
+.a-lead { margin: 0 0 14px; line-height: 1.6; }
+.a-sub { margin-top: 22px; }
+.a-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+  background: var(--surface-2); padding: 2px 6px; border-radius: 5px;
+}
+.a-pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; line-height: 1.6;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; margin: 0; white-space: pre-wrap; word-break: break-word;
+  max-height: 420px; overflow: auto;
+}
+
+.a-add { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
+.a-input {
+  flex: 1 1 240px; min-width: 200px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 999px;
+  color: var(--text); font: inherit; font-size: 15px; padding: 10px 16px;
+}
+.a-input:focus { outline: none; border-color: var(--accent); }
+
+.a-challenge { padding: 0; }
+.a-challenge-head {
+  appearance: none; width: 100%; cursor: pointer; text-align: left; font: inherit; color: inherit;
+  background: none; border: 0; padding: 18px 20px;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.a-challenge-head:hover { background: var(--surface-2); border-radius: var(--radius); }
+.a-challenge-title { font-weight: 700; font-size: 17px; }
+.a-challenge-meta { color: var(--muted); font-size: 13px; }
+.a-chevron { margin-left: auto; color: var(--accent); font-weight: 600; font-size: 14px; }
+.a-challenge-body { padding: 0 20px 20px; border-top: 1px solid var(--border); }
+.a-challenge-body .a-sub:first-child { margin-top: 18px; }
+
+.a-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.a-chip {
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 999px; padding: 3px 10px; font-size: 13px;
+}
+
+.a-filter { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.a-filter .a-input { flex: 0 1 260px; }
+.a-conv-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 18px 0 0; }
+
+/* The mission repeated on the conversation screen. Foldable, because the transcript is
+   what that screen is for; the marker is styled like the "Gemeistert" pile's. */
+.goal-recall { margin-top: 4px; }
+.goal-recall > summary {
+  cursor: pointer;
+  list-style: none;
+  align-items: center;
+}
+.goal-recall > summary::-webkit-details-marker { display: none; }
+.goal-recall > summary .brief-label::before {
+  content: "\25B8";
+  display: inline-block;
+  margin-right: 8px;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+.goal-recall[open] > summary .brief-label::before { transform: rotate(90deg); }
+/* The briefing sets the goal at 18px because it is that screen's headline. Here it is a
+   reminder sitting above the transcript, so it drops back to body size and the whole
+   panel stays glanceable instead of pushing the conversation down. */
+.goal-recall .goal-row .vocab-de,
+.goal-recall .goal-row .vocab-en { font-size: 15px; }
+.goal-recall .vocab-list { gap: 6px; }
+
+/* Login gate. Shown full-screen until a Google session exists. */
+.login { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); padding: 24px; }
+.login-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 40px; max-width: 380px; width: 100%; text-align: center;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.06);
+}
+.login-brand { position: static; transform: none; left: auto; top: auto; font-size: 28px; margin-bottom: 16px; }
+.login-sub { color: var(--muted); font-size: 15px; line-height: 1.5; margin: 0 0 24px; }
+.login-btn { width: 100%; justify-content: center; }

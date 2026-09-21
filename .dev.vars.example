@@ -9,6 +9,11 @@ AUTH_SECRET=
 # Domínio público do app. Em produção: https://<worker>.<subdominio>.workers.dev
 AUTH_URL=http://localhost:8787
 
+# Quem abre /admin (lista separada por vírgula). Ver .env.example.
+# O dono do app é joao.kroth7@gmail.com. Em produção isto é um secret do Worker
+# (`npx wrangler secret put ADMIN_EMAILS`), não este arquivo: "How To/HowTo-admin.md".
+ADMIN_EMAILS=joao.kroth7@gmail.com
+
 # Sal para o id pseudônimo de analytics (opcional; sem ele, analyticsId fica null).
 #   openssl rand -hex 16
 ANALYTICS_SALT=
@@ -19,5 +24,6 @@ ANALYTICS_SALT=
 #   npx wrangler secret put GOOGLE_CLIENT_SECRET
 #   npx wrangler secret put AUTH_SECRET
 #   npx wrangler secret put ANALYTICS_SALT
+#   npx wrangler secret put ADMIN_EMAILS
 # Atenção: NEXT_PUBLIC_POSTHOG_KEY NÃO entra aqui. É embutida no build, não no runtime.
 # E AUTH_URL entra como var normal no wrangler.jsonc ("vars") ou como secret.
