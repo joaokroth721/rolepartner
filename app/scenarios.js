@@ -47,7 +47,7 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zum Kau
   {
     id: "coaching",
     category: "Beruf",
-    level: "B1",
+    level: "B2.1",
     // Optional: ties the scenario to a course chapter. Only the scenarios that belong to a
     // Lektion carry it; the pill is skipped everywhere when the field is absent.
     lektion: "Lektion 10",
@@ -66,16 +66,16 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zum Kau
     // language unavoidable. The examiner grades each task 0-2, so a one-sided answer
     // loses real points instead of merely sounding flat.
     tasks: [
-      "Erzähle, woran du beruflich gescheitert bist",
-      "Wäge eine Eigenschaft ab: einerseits eine Stärke, andererseits eine Schwäche",
-      "Widersprich Milo höflich und schränke sein Argument ein",
-      "Fasse einen Entschluss und nenne ein neues Ziel",
+      "Schildere einen beruflichen Rückschlag und analysiere, woran er wirklich lag",
+      "Wäge eine Eigenschaft differenziert ab: je nach Kontext Stärke oder Schwäche",
+      "Widersprich Milos zugespitzter These und schränke sie begründet ein",
+      "Zieh ein Fazit, formuliere ein neues Ziel und begründe deinen Entschluss",
     ],
     tasksEn: [
-      "Say what you failed at professionally",
-      "Weigh up one trait: a strength on one hand, a weakness on the other",
-      "Disagree with Milo politely and qualify his argument",
-      "Make a decision and name a new goal",
+      "Describe a professional setback and analyse what really caused it",
+      "Weigh up one trait in a nuanced way: a strength or weakness depending on context",
+      "Disagree with Milo's pointed thesis and qualify it with reasons",
+      "Draw a conclusion, name a new goal, and justify your decision",
     ],
 
     vocab: [
@@ -90,15 +90,17 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zum Kau
       { de: "Hilfe leisten", en: "to give help" },
       { de: "zur Verfügung stellen", en: "to make available" },
     ],
-    // The "Argumente einschränken" set: qualifying an argument instead of flatly agreeing
-    // or disagreeing. Saying these is what the challenge is for, so they are also the
-    // target phrases the score measures against the transcript.
+    // B2.1 hedging: differentiated, reasoned qualifying with subjunctive II and abstract
+    // connectors (gleichwohl, insofern, weniger … als vielmehr). Saying these is what the
+    // challenge is for, so they are also the target phrases the score measures against the
+    // transcript.
     phrases: [
-      { de: "Einerseits ist es positiv, dass …, andererseits ist es problematisch, wenn …", en: "On the one hand it is good that …, on the other hand it is a problem when …" },
-      { de: "Man kann zwar sagen, dass …, allerdings muss man auch bedenken, dass …", en: "You can certainly say that …, however you also have to consider that …" },
-      { de: "Im Prinzip ist es von Vorteil, dass …, trotzdem darf man nicht vergessen, dass …", en: "In principle it is an advantage that …, still you must not forget that …" },
-      { de: "Das stimmt schon, aber so einfach ist das leider nicht.", en: "That is true, but unfortunately it is not that simple." },
-      { de: "Kritisch wird es aber, wenn …", en: "It gets critical though when …" },
+      { de: "Rückblickend würde ich sagen, dass mein Scheitern weniger an … lag als vielmehr an …", en: "In hindsight I would say my failure was less about … than about …" },
+      { de: "Was auf den ersten Blick wie eine Stärke wirkt, kann sich unter Druck durchaus als Schwäche erweisen.", en: "What looks like a strength at first can well turn out to be a weakness under pressure." },
+      { de: "Man müsste hier differenzieren: In dem einen Kontext ist … hilfreich, in dem anderen eher hinderlich.", en: "One would have to differentiate: in one context … helps, in another it rather gets in the way." },
+      { de: "Das mag im Prinzip zutreffen, greift meiner Ansicht nach aber zu kurz.", en: "That may be true in principle, but in my view it falls short." },
+      { de: "Gerade weil ich … bin, laufe ich Gefahr, mich zu übernehmen.", en: "Precisely because I am …, I run the risk of overreaching." },
+      { de: "Unterm Strich habe ich mich entschieden, … anzugehen.", en: "On balance I have decided to tackle …" },
     ],
 
     system: `Du bist Milo Hansen, Coach im Institut für erfolgreiches Scheitern.
@@ -110,12 +112,13 @@ damit der Nutzer widersprechen und einschränken muss.
 Akzeptiere kein pauschales "gut" oder "schlecht": frag dann nach der anderen Seite
 ("Und was spricht dagegen?", "Wann wird genau das zum Problem?").
 Wenn der Nutzer eine Eigenschaft nur als Stärke nennt, verlange die Kehrseite.
+Das Gespräch läuft auf B2-Niveau: Verlange differenzierte, gut begründete Antworten und gib dich nie mit einem Satz zufrieden.
 Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu einem neuen Ziel.`,
   },
   {
     id: "minimalismus",
     category: "Konsum",
-    level: "B1",
+    level: "B2.1",
     lektion: "Lektion 11",
     photo: "https://picsum.photos/seed/minimalismus/600/400",
 
@@ -130,16 +133,16 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu eine
     // Verzicht ausdrücken (S. 55) and Argumente einschränken (S. 57). The examiner grades
     // each task 0-2, so skipping a box is what costs points, not merely sounding flat.
     tasks: [
-      "Sag, wie du dich in einer fast leeren Wohnung fühlen würdest, und warum",
-      "Nenne drei Dinge, auf die du verzichten könntest, und begründe es",
-      "Schränke Sabrinas Argument ein, statt einfach zuzustimmen",
-      "Entscheide dich für eine Entrümpelungsmethode und begründe die Wahl",
+      "Schildere, wie sich ein fast leeres Zuhause kurz- und langfristig anfühlen würde",
+      "Nenne drei Dinge, auf die du verzichten könntest, und wäge den Verzicht gegeneinander ab",
+      "Schränke Sabrinas zugespitzte These begründet ein, statt einfach zuzustimmen",
+      "Wäge zwei Entrümpelungsmethoden ab und begründe deine Wahl",
     ],
     tasksEn: [
-      "Say how you would feel in an almost empty flat, and why",
-      "Name three things you could do without, and say why",
-      "Qualify Sabrina's argument instead of simply agreeing",
-      "Choose a decluttering method and justify the choice",
+      "Describe how an almost empty home would feel in the short and long term",
+      "Name three things you could do without, and weigh the trade-offs against each other",
+      "Qualify Sabrina's pointed thesis with reasons instead of simply agreeing",
+      "Weigh two decluttering methods against each other and justify your choice",
     ],
 
     vocab: [
@@ -154,16 +157,16 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu eine
       { de: "mit wenig auskommen", en: "to get by with little" },
       { de: "in einem guten Zustand sein", en: "to be in good condition" },
     ],
-    // The three Kommunikation boxes of the lesson, in the order the tasks ask for them.
-    // These are also the target phrases the score measures against the transcript, so
-    // saying them is worth points and not only style.
+    // B2.1 register: hypothesising with subjunctive II, concession, and weighing pro/contra
+    // (ließe sich einwenden, letztlich kommt es darauf an). These are the target phrases the
+    // score measures against the transcript, so saying them is worth points and not only style.
     phrases: [
-      { de: "Ich persönlich würde mich wohlfühlen, weil …", en: "Personally I would feel comfortable, because …" },
-      { de: "Was mir auf jeden Fall fehlen würde, wäre …", en: "What I would definitely miss would be …" },
-      { de: "Also, ich könnte auf … verzichten. Den brauche ich sowieso nicht.", en: "Well, I could do without … I do not need it anyway." },
-      { de: "Die Anzahl meiner … könnte ich reduzieren.", en: "I could reduce the number of my …" },
-      { de: "Ich denke zwar auch, dass …, das heißt jedoch nicht, dass …", en: "I do think as well that …, that does not mean however that …" },
-      { de: "Es stimmt zwar, dass …, aber entscheidend ist für mich, dass …", en: "It is true that …, but what is decisive for me is that …" },
+      { de: "Ich könnte mir gut vorstellen, mich dort anfangs fremd zu fühlen, langfristig aber zur Ruhe zu kommen.", en: "I could well imagine feeling out of place there at first, but finding calm in the long run." },
+      { de: "Verzichten fällt mir dort leicht, wo … austauschbar ist; schwieriger wird es, sobald ein persönlicher Wert im Spiel ist.", en: "Doing without comes easily where … is interchangeable; it gets harder as soon as personal value is involved." },
+      { de: "Dass Minimalismus befreit, will ich nicht bestreiten, allerdings sollte man den sozialen Druck dahinter nicht unterschätzen.", en: "I would not deny that minimalism liberates, but one should not underestimate the social pressure behind it." },
+      { de: "Letztlich kommt es weniger auf die Menge an als darauf, welche Bedeutung wir den Dingen beimessen.", en: "Ultimately it depends less on quantity than on the meaning we attach to things." },
+      { de: "Für die … Methode spricht, dass …; dagegen ließe sich allerdings einwenden, dass …", en: "In favour of the … method is that …; against it, however, one could object that …" },
+      { de: "Ich neige zu der … Methode, weil sie … am ehesten gerecht wird.", en: "I lean towards the … method, because it best does justice to …" },
     ],
 
     system: `Du bist Sabrina Krause, Minimalismus-Bloggerin und Hostin des Podcasts „so einfach“.
@@ -174,12 +177,13 @@ Frag nach Gegenständen, nicht nach Theorie ("Was liegt bei dir seit Jahren unge
 Widersprich dem Nutzer mindestens einmal freundlich ("Aber Dinge erzählen doch Geschichten." / "Ohne Auto geht es nicht."),
 damit er sein Argument einschränken muss statt nur zuzustimmen.
 Stell am Ende die drei Methoden vor: Korb-Methode, Karton-Methode, Drei-Kisten-Methode.
+Das Gespräch läuft auf B2-Niveau: Verlange differenzierte, gut begründete Antworten und gib dich nie mit einem Satz zufrieden.
 Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu einer Entscheidung.`,
   },
   {
     id: "innereuhr",
     category: "Wissenschaft",
-    level: "B1",
+    level: "B2.1",
     lektion: "Lektion 9",
     photo: "https://picsum.photos/seed/innereuhr/600/400",
 
@@ -195,18 +199,18 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu eine
     // begründen (S. 45), ein Problem darstellen und ein Produkt vorstellen (S. 45). The
     // examiner grades each task 0-2, so skipping a box is what costs points.
     tasks: [
-      "Beschreibe deine Tageskurve: wo das größte Hoch liegt und wann die Kurve sinkt",
-      "Sag, was dich an der Forschung zur inneren Uhr überrascht hat",
-      "Gib dein Wissen über Schlaftypen wieder und vergleiche dich mit anderen",
-      "Vermute, welche der drei Meldungen eine Falschmeldung ist, und begründe es",
-      "Stell ein Problem der Schichtarbeit dar und dann eine Erfindung dagegen",
+      "Beschreibe deine Tageskurve präzise: wo das größte Hoch liegt und ab wann die Kurve abfällt",
+      "Sag, was dich an der Forschung zur inneren Uhr überrascht hat, und ordne es ein",
+      "Gib dein Wissen über Schlaftypen wieder und grenze dich begründet von anderen ab",
+      "Vermute, welche der drei Meldungen erfunden ist, und begründe deine Vermutung schlüssig",
+      "Stell ein Problem der Schichtarbeit dar und entwirf eine Erfindung dagegen samt Vorteil",
     ],
     tasksEn: [
-      "Describe your daily curve: where the biggest peak is and when the curve falls",
-      "Say what surprised you about the research on the body clock",
-      "Relay what you know about sleep types and compare yourself with others",
-      "Guess which of the three news items is fake, and say why",
-      "Present a problem of shift work, then an invention that answers it",
+      "Describe your daily curve precisely: where the biggest peak is and from when it falls",
+      "Say what surprised you about the research on the body clock, and put it in context",
+      "Relay what you know about sleep types and set yourself apart from others with reasons",
+      "Guess which of the three news items is fabricated, and justify your guess coherently",
+      "Present a problem of shift work and design an invention against it, with its advantage",
     ],
 
     vocab: [
@@ -227,23 +231,18 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu eine
       { de: "im Gegensatz zu", en: "in contrast to" },
       { de: "jedoch", en: "however" },
     ],
-    // The four Kommunikation boxes of the lesson, in the order the tasks ask for them.
-    // These are also the target phrases the score measures against the transcript, so
-    // saying them is worth points and not only style.
+    // B2.1 register: describing a chart formally, relaying research with hedged certainty,
+    // reasoning about plausibility (es liegt nahe, andernfalls müsste man annehmen), and
+    // presenting a solution. These are the target phrases the score measures against the
+    // transcript, so saying them is worth points and not only style.
     phrases: [
-      { de: "Wie das Schaubild zeigt, …", en: "As the chart shows, …" },
-      { de: "Mein größtes Hoch habe ich am …", en: "My biggest peak is in the …" },
-      { de: "Ab … sinkt die Kurve, und das größte Tief kommt am …", en: "From … the curve falls, and the biggest low comes in the …" },
-      { de: "Überraschend war für mich vor allem, dass …", en: "What surprised me most was that …" },
-      { de: "Mich hat überrascht, dass …", en: "It surprised me that …" },
-      { de: "Soviel ich weiß, hängt das mit … zusammen.", en: "As far as I know, that has to do with …" },
-      { de: "Unbestritten ist auf jeden Fall, dass …", en: "What is undisputed in any case is that …" },
-      { de: "Ich könnte mir vorstellen, dass …, weil …", en: "I could imagine that …, because …" },
-      { de: "Das kommt mir unglaubwürdig vor. Ich würde vermuten, dass …", en: "That seems implausible to me. I would guess that …" },
-      { de: "Für viele ist es problematisch, wenn …", en: "For many people it is a problem when …" },
-      { de: "… macht vielen Menschen große Schwierigkeiten.", en: "… causes many people big difficulties." },
-      { de: "Bei … handelt es sich um …", en: "… is a …" },
-      { de: "Ein besonderes Merkmal ist, dass …", en: "A special feature is that …" },
+      { de: "Dem Schaubild zufolge erreicht meine Leistungskurve gegen … ihren Höhepunkt, bevor sie … deutlich abfällt.", en: "According to the chart, my performance curve peaks around …, before it drops noticeably at …" },
+      { de: "Was mich dabei am meisten erstaunt hat, ist der Umstand, dass …", en: "What astonished me most is the fact that …" },
+      { de: "Soweit ich informiert bin, geht die Forschung davon aus, dass …", en: "As far as I am informed, research assumes that …" },
+      { de: "Im Gegensatz zu vielen anderen zähle ich eher zu den …, was sich daran zeigt, dass …", en: "In contrast to many others I count more as a …, which shows in the fact that …" },
+      { de: "Es liegt nahe, dass … erfunden ist, denn andernfalls müsste man annehmen, dass …", en: "It stands to reason that … is made up, because otherwise one would have to assume that …" },
+      { de: "Ein grundlegendes Problem der Schichtarbeit besteht darin, dass …; hier könnte … Abhilfe schaffen.", en: "A fundamental problem of shift work is that …; here … could provide a remedy." },
+      { de: "Bei meiner Erfindung handelt es sich um …, deren besonderer Vorteil darin liegt, dass …", en: "My invention is a …, whose particular advantage lies in the fact that …" },
     ],
 
     system: `Du bist Jule Bergmann, Moderatorin der Radiosendung „Neues aus der Forschung“ auf @radio9.
@@ -261,12 +260,13 @@ Führe die Sendung in dieser Reihenfolge:
 Akzeptiere kein bloßes "morgens bin ich fit": frag nach Hoch, Tief und Uhrzeit.
 Widersprich dem Gast mindestens einmal freundlich ("Licht ändert doch nichts an den Genen."),
 damit er sein Wissen begründet statt nur zuzustimmen.
+Das Gespräch läuft auf B2-Niveau: Verlange differenzierte, gut begründete Antworten und gib dich nie mit einem Satz zufrieden.
 Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zur Erfindung.`,
   },
   {
     id: "esstyp",
     category: "Essen",
-    level: "B1",
+    level: "B2.1",
     lektion: "Lektion 8",
     photo: "https://picsum.photos/seed/esstyp/600/400",
 
@@ -282,18 +282,18 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zur Erf
     // Argumente einschränken, zustimmen und widersprechen (S. 41). The examiner grades
     // each task 0-2, so a polite "ja, stimmt" through the whole dinner costs points.
     tasks: [
-      "Sag, welcher Esstyp du bist, und beschreibe deine Essgewohnheiten",
-      "Drück Verständnis für Barbaras Kontrolle aus",
-      "Drück an einer Stelle Unverständnis oder Gleichgültigkeit aus",
-      "Nenne ein Argument und ein Gegenargument zum Kontrollieren des Essverhaltens",
-      "Schränke Barbaras Argument ein und sag klar, ob du zustimmst oder widersprichst",
+      "Sag, welcher Esstyp du bist, und ordne deine Essgewohnheiten differenziert ein",
+      "Drück nachvollziehend Verständnis für Barbaras Kontrolle aus",
+      "Drück an einer Stelle begründetes Unverständnis oder Gleichgültigkeit aus",
+      "Wäge ein Argument und ein Gegenargument zum Kontrollieren des Essverhaltens ab",
+      "Schränke Barbaras zugespitzte These ein und formuliere ein klares Urteil",
     ],
     tasksEn: [
-      "Say which eating type you are, and describe your eating habits",
-      "Express understanding for Barbara's control",
-      "At some point express a lack of understanding, or indifference",
-      "Name an argument and a counter-argument about controlling what you eat",
-      "Qualify Barbara's argument and say clearly whether you agree or disagree",
+      "Say which eating type you are, and place your eating habits in a nuanced way",
+      "Express understanding for Barbara's control, showing you follow her reasoning",
+      "At some point express a reasoned lack of understanding, or indifference",
+      "Weigh an argument and a counter-argument about controlling what you eat",
+      "Qualify Barbara's pointed thesis and formulate a clear verdict",
     ],
 
     vocab: [
@@ -313,22 +313,17 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zur Erf
       { de: "kurz und gut", en: "in short" },
       { de: "fix und fertig", en: "exhausted, worn out" },
     ],
-    // The Kommunikation boxes of the lesson: Verständnis, Unverständnis, Gleichgültigkeit
-    // (S. 40) and the argument set of the Kommentar (S. 41). These are the target phrases
-    // the score measures against the transcript, so saying them is worth points.
+    // B2.1 register: nuanced understanding, reasoned indifference, and weighing pro/contra
+    // with abstract connectors (gleichwohl, dem steht entgegen, so … so wenig). These are
+    // the target phrases the score measures against the transcript, so saying them is worth
+    // points.
     phrases: [
-      { de: "Bis zu einem gewissen Grad kann ich verstehen, dass …", en: "Up to a point I can understand that …" },
-      { de: "Ich habe Verständnis dafür, dass …", en: "I do have sympathy for the fact that …" },
-      { de: "Das geht einfach zu weit.", en: "That simply goes too far." },
-      { de: "Man kann es auch übertreiben.", en: "You can also overdo it." },
-      { de: "Wenn ich ehrlich bin, ist mir das ziemlich egal.", en: "If I am honest, I do not really care." },
-      { de: "Wenn sie es glücklich macht!", en: "If it makes her happy!" },
-      { de: "Ein wichtiges Argument dafür ist, dass …", en: "An important argument for it is that …" },
-      { de: "Ein weiteres Argument dagegen ist, dass …", en: "A further argument against it is that …" },
-      { de: "Zwar hat sie recht, wenn sie sagt, dass …", en: "She is right when she says that …" },
-      { de: "Das ist allerdings nicht ganz richtig, denn …", en: "That is however not quite right, because …" },
-      { de: "Stimme voll und ganz zu.", en: "I agree completely." },
-      { de: "Bin komplett dagegen.", en: "I am completely against it." },
+      { de: "Ich kann durchaus nachvollziehen, dass …, gleichwohl frage ich mich, ob …", en: "I can certainly understand that …, yet I wonder whether …" },
+      { de: "Ehrlich gesagt lässt es mich eher kalt, ob …", en: "Honestly, it rather leaves me cold whether …" },
+      { de: "Für ein so kontrolliertes Essverhalten spricht zwar …, dem steht jedoch entgegen, dass …", en: "In favour of such controlled eating is …, but against it stands the fact that …" },
+      { de: "So berechtigt dein Einwand ist, so wenig überzeugt er mich, denn …", en: "As valid as your objection is, it convinces me just as little, because …" },
+      { de: "Man kann es mit der Selbstoptimierung auch übertreiben, findest du nicht?", en: "You can also overdo it with self-optimisation, don't you think?" },
+      { de: "Unterm Strich neige ich zu der Auffassung, dass …", en: "On balance I lean towards the view that …" },
     ],
 
     system: `Du bist Barbara, eine Freundin des Nutzers, und du hast ihn zum Abendessen eingeladen.
@@ -343,6 +338,7 @@ Frag den Nutzer früh, welcher Esstyp er ist: Genießer, Zweckesser, Frustesser 
 Vertritt klare Thesen ("Wer seinen Körper kennt, lebt länger." / "Bauchgefühl ist keine Ernährung."),
 damit der Nutzer Argumente nennen, einschränken, zustimmen oder widersprechen muss.
 Nimm ein bloßes "ja, stimmt" nicht an: frag dann nach ("Und was spricht dagegen?").
+Das Gespräch läuft auf B2-Niveau: Verlange differenzierte, gut begründete Antworten und gib dich nie mit einem Satz zufrieden.
 Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu seinem klaren Urteil.`,
   },
   {

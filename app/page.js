@@ -44,6 +44,26 @@ function AuthButton() {
   );
 }
 
+// Full-screen gate shown until a Google session exists. Everything else (identity by email,
+// favorites/progress in D1, staying logged in via the JWT cookie) is already handled server-side.
+function LoginScreen({ loading }) {
+  return (
+    <div className="login">
+      <div className="login-card">
+        <div className="brand login-brand">
+          RolePartner <span className="brand-tag">DE</span>
+        </div>
+        <p className="login-sub">
+          Melde dich an, um zu üben. Dein Fortschritt und deine Favoriten bleiben mit deinem Konto verknüpft.
+        </p>
+        <button className="btn btn-primary login-btn" disabled={loading} onClick={() => signIn("google")}>
+          {loading ? "..." : "Mit Google anmelden"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 const TYPE_LABEL = { vocab: "Vokabeln", phrase: "Sätze", message: "Nachrichten", keyword: "Texte" };
 const favChip = (f) => (f.type && f.type !== "correction" ? TYPE_LABEL[f.type] : f.tag || "Sonstiges");
 const favDate = (f) => (f.createdAt ? new Date(f.createdAt).toLocaleString("pt-BR") : "");
@@ -687,6 +707,7 @@ function TextReader({ text, favKeys, onToggleFav, onBack }) {
 
 // ponytail: Web Speech API é nativo mas só confiável no Chrome. Trocar por Realtime API se a voz robótica incomodar.
 export default function Home() {
+  const { status: authStatus } = useSession(); // "loading" | "authenticated" | "unauthenticated"
   const [scenario, setScenario] = useState(null);
   const [stage, setStage] = useState("intro"); // intro | chat | leaderboard | feedback
   const [showEn, setShowEn] = useState(false); // intro em inglês?
@@ -752,9 +773,10 @@ export default function Home() {
     });
   }, [screen, scenario?.id, openText?.id]);
 
-  // Who am I (anonymous id on first visit, Google account once login is configured) and
-  // what have I saved. Both come from D1; nothing is kept in the browser any more.
+  // Who am I and what have I saved. Both come from D1; nothing is kept in the browser any more.
+  // Only fires once signed in: the app is gated below, so there is no anonymous bootstrap.
   useEffect(() => {
+    if (authStatus !== "authenticated") return;
     let alive = true;
     (async () => {
       try {
@@ -772,7 +794,7 @@ export default function Home() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [authStatus]);
 
   // The history is fetched the first time the Verlauf view is opened, never in the
   // bootstrap effect above: that one runs on every page load and its calls must stay
@@ -1025,6 +1047,9 @@ export default function Home() {
     stopSpeaking();
     if (scenario) back();
   };
+
+  // Login gate: nothing renders until a Google session exists.
+  if (authStatus !== "authenticated") return <LoginScreen loading={authStatus === "loading"} />;
 
   const topbar = (
     <header className="topbar">

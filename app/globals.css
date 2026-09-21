@@ -805,3 +805,14 @@ h1.title {
 .goal-recall .goal-row .vocab-de,
 .goal-recall .goal-row .vocab-en { font-size: 15px; }
 .goal-recall .vocab-list { gap: 6px; }
+
+/* Login gate. Shown full-screen until a Google session exists. */
+.login { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); padding: 24px; }
+.login-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 40px; max-width: 380px; width: 100%; text-align: center;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.06);
+}
+.login-brand { position: static; transform: none; left: auto; top: auto; font-size: 28px; margin-bottom: 16px; }
+.login-sub { color: var(--muted); font-size: 15px; line-height: 1.5; margin: 0 0 24px; }
+.login-btn { width: 100%; justify-content: center; }

@@ -926,3 +926,62 @@ of the A/B/C color coding. There is no dark-mode block in this stylesheet, so no
 
 `npx next build` passes. `How To/HowTo-challenge.md` documents the field in the object
 template, the intro description, and the authoring checklist.
+## Login gate: the app now requires Google sign-in
+
+The backend for this already existed and was untouched: `resolveUser` in `app/db.js`
+keys a user by Google email, adopts an anonymous cookie row on first login, and the
+JWT session cookie keeps you signed in. Favorites and progress were already stored in
+D1 per user. The only thing missing was the front-end gate, so that is all that changed.
+
+Three edits in `app/page.js` plus login styles in `globals.css`:
+
+- `Home()` now reads `useSession().status`. When it is not `authenticated`, the whole
+  app is replaced by a full-screen `LoginScreen` with a single "Mit Google anmelden"
+  button. `loading` shows a disabled placeholder so the button does not flash.
+- the bootstrap effect (`/api/me` + `/api/favorites`) now returns early unless
+  authenticated, and depends on `authStatus`. Before, it fired on every page load and
+  minted an anonymous user; with a hard gate there is no reason to create anonymous
+  rows, so it waits for the session and runs when one appears.
+- the existing `AuthButton` in the topbar is unchanged; it still handles sign-out.
+
+Consequence worth noting: the anonymous-use path (cookie identity, then adoption on
+login) is now unreachable from the UI. The code in `db.js` that supports it is left in
+place, not deleted: it is harmless, and removing it is a separate decision.
+
+**Blocked on account setup, not code.** Sign-in will error until Google OAuth
+credentials exist. `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are empty in
+`.env.local` (`AUTH_SECRET` and `OPENAI_API_KEY` are set). Create an OAuth client at
+https://console.cloud.google.com/apis/credentials with redirect URIs
+`http://localhost:3000/api/auth/callback/google` (dev) and the production callback, then
+fill those two vars. In production they are Worker secrets
+(`npx wrangler secret put GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`), plus `AUTH_URL`.
+
+`npx next build` passes.
+
+## Four Kursbuch challenges lifted from B1 to B2.1
+
+`coaching`, `minimalismus`, `innereuhr`, `esstyp` were all tagged B1. They now read
+B2.1. This was not a label swap: relabelling without touching the content would have
+lied about the difficulty. What actually changed per scenario:
+
+- **phrases** (the target language the score measures against the transcript): rewritten
+  in B2.1 register. Subjunctive II hypothesising, abstract adversative/concessive
+  connectors (gleichwohl, dem steht entgegen, weniger … als vielmehr, ließe sich
+  einwenden), and pro/contra weighing replace the flatter B1 chunk phrases. Each list is
+  now 6-7 phrases instead of the old 5-13.
+- **tasks**: sharpened toward analysis and nuance (analyse the real cause, differentiate
+  by context, weigh two methods against each other) rather than name/describe.
+- **system**: each partner got one line demanding B2-level answers ("Verlange
+  differenzierte, gut begründete Antworten und gib dich nie mit einem Satz zufrieden.").
+
+The old phrase-list comments tied each set to specific B1 Kursbuch Kommunikation boxes
+and page numbers (Lektion 8/9, S. 40-57). Those mappings no longer hold after the
+rewrite, so the comments were replaced with a note on the B2.1 register instead.
+
+No UI or CSS change needed: the level badge keys off `level[0]`, so "B2.1" reuses the
+existing `level-B` styling, and the home-screen level filter is built from
+`new Set(scenarios.map(s => s.level))`, so "B2.1" shows up as a filter option on its own.
+
+Left open: the four scenarios' `vocab` lists were left as-is. They are already
+appropriate, and swapping words would not raise the level the way the phrases do. Revisit
+if the scenarios feel too easy in practice.
