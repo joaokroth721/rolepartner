@@ -29,6 +29,12 @@ export function chatSystem(s) {
         .join("\n")}`
     );
   }
+  // The client listens hands-free and needs to know when to stop. When the goal is reached
+  // and you are saying goodbye, close that final message with the marker [[ENDE]]. Use it
+  // once, only when the conversation is genuinely over.
+  lines.push(
+    "Wenn das Ziel des Gesprächs erreicht ist und ihr euch verabschiedet, beende deine allerletzte Nachricht mit dem Marker [[ENDE]]. Verwende diesen Marker nur einmal und nur, wenn das Gespräch wirklich zu Ende ist."
+  );
   return lines.join("\n");
 }
 

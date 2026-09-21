@@ -11,7 +11,8 @@ export const scenarios = [
     // without a mouth; `mouth` says where the animated one belongs, in percent of the art's
     // box, so the anchor travels with the scenario instead of living in the component.
     // Optional: a scenario without `partner` shows no illustration at all.
-    partner: { art: "/partners/fahrkarte.svg", mouth: { x: 50, y: 59, w: 7 } },
+    // partner oculto por ora (pode voltar): descomente para reexibir o avatar na conversa
+    // partner: { art: "/partners/fahrkarte.svg", mouth: { x: 50, y: 59, w: 7 } },
 
     title: "Fahrkarte kaufen",
     desc: "Kauf am Bahnhofsschalter eine Zugfahrkarte.",

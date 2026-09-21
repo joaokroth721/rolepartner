@@ -1152,3 +1152,104 @@ wrong reason.
 
 `restaurant` and `arzt` are still `locked: true`. They are fully built and tested, but
 nobody can play them until that flag comes off.
+
+### Fahrkarte: partner avatar hidden on the conversation screen
+
+Commented out the `partner` field on the `fahrkarte` scenario in `app/scenarios.js`.
+`PartnerStage` already returns `null` when a scenario has no `partner`, so with the field
+gone the face and its animated mouth simply don't render on the chat screen. The SVG at
+`/public/partners/fahrkarte.svg` stays in place and the line is commented, not deleted, so
+re-enabling is one uncomment away. Only Fahrkarte is affected; other scenarios keep their
+avatars. Reason: user wants the face out for now, possibly back later.
+
+## 21.09.2026 - Hands-free conversation and automatic ending
+
+The conversation screen used to make you click "Sprechen" once per turn: `listen()` opened a
+single-shot recognition, captured one phrase, sent it, closed. The user wanted the mic live
+the whole time, and two ways to end (manual button, or automatic when the topic is done).
+
+### Mic: a self-re-arming turn loop, not a button
+
+`listen()` is now `armMic()` in `app/page.js`. It re-arms itself from inside the recognition's
+`onend` and from the partner utterance's `onend`, so between turns the mic reopens on its own.
+The "Sprechen" button is gone; the chat screen shows a status line (Höre zu… / Denkt nach… /
+Spricht…) and keeps only "Gespräch beenden" as the manual interrupt.
+
+The real problem hands-free is **echo**: an open mic hears the partner's own TTS through the
+speakers and transcribes it. The guard is one line: `armMic` starts only when
+`wantMicRef && !busyRef && !speakingRef`. Those are **refs**, not state, because the recognition
+and utterance callbacks close over stale state; `busyRef` is set synchronously in `send()`
+(before its first `await`) precisely so the recognition's `onend`, which fires right after the
+result, sees a turn is in flight and does not re-arm mid-request. `speakingRef` is set in the
+utterance `onstart`/`onend`. The mic re-arms from the utterance's `onend`, i.e. only after the
+partner has finished speaking. Transcripts of length <= 1 are dropped as noise.
+
+`wantMicRef` is flipped on at `startConversation` (a real click, so the mic-permission prompt
+rides a user gesture) and off at `back`, `endConversation`, and when a conversation ends.
+
+### Automatic ending: the partner decides
+
+`chatSystem` (`app/prompts.js`) now tells the partner to close its final message with `[[ENDE]]`
+when the goal is met and it is saying goodbye. `app/api/chat/route.js` strips the marker from
+the text (the learner never sees or hears it) and returns `done: true`. Chose a sentinel over a
+farewell-phrase heuristic (fragile) and over a second structured call (an extra request per
+turn): one line in the prompt, one `includes`/`replace` in the route.
+
+On `done`, the client stops the mic and shows a panel "Das Gespräch scheint beendet. Ergebnis
+ansehen?" with "Ergebnis ansehen" (-> `endConversation`) and "Weiter reden" (re-arms the mic).
+Deliberately does not auto-score: the user asked to be asked first.
+
+Skipped: barge-in (interrupting the partner mid-sentence) and any non-Chrome path. Web Speech
+was already Chrome-only here. Verified with `npm run build`; the re-arm guard is a plain boolean
+AND, so no separate unit test.
+
+### Follow-up: history reset every turn (stale closure)
+
+The first cut broke conversation continuity: every turn erased the previous ones and the
+partner restarted. `send()` built its request from `const next = [...messages, ...]`, reading
+`messages` from its closure. With the old button, `onClick` ran the latest render's `send`, so
+that closure was current. The hands-free loop is self-perpetuating and freezes on the render it
+starts on: `startConversation` (messages `[]`) -> `armMic` -> `onresult` -> `send` -> `speak` ->
+utterance `onend` -> `armMic` -> new rec -> `onresult` -> `send`, every link the render-initial
+reference. So `send` always saw `messages === []` and rebuilt from empty.
+
+Fix: `messagesRef` (a ref mirrored from state via effect), and `send` reads and writes the ref
+instead of the closure. `endConversation`/`back` still read `messages` but only run from button
+clicks (latest closure), so they were left alone. Build clean.
+
+---
+
+## 21.09.2026 - Leaderboard: reachable before playing, ranked by attempt
+
+Two changes, one file each, after a false alarm. The report was "the leaderboard doesn't work."
+It did: reading prod D1 showed the whole board was 4 (then 5) sessions, all from one player in
+`fahrkarte`. Empty of people, not broken. The screen was correct; there was just no one to rank
+against. No code needed for that part, only the two below.
+
+### 1. A way in without finishing a conversation
+
+The board only ever showed at `stage=leaderboard`, i.e. after `endConversation` scores a game.
+Added an entry on the challenge's `intro` page: a "Bestenliste" button next to "Los geht's",
+and a new `stage=board` sub-view that reuses the existing `Leaderboard` component. `openBoard()`
+fetches the already-existing `GET /api/leaderboard?scenarioId=<id>` (no new route). The component
+grew one prop, `view`: in view mode it drops the post-game `result-hero` (there is no just-earned
+score to show) and the CTA reads "Zurück" instead of "Zur Auswertung". Still a sub-view of the
+challenge, not a separate global page, which is what was asked.
+
+### 2. Ranking by attempt, not by best-per-player
+
+Seeing only himself at Platz 1 with "5 Versuche", the ask was to see the individual attempts.
+Chosen over a separate "Deine Versuche" list: change what the board ranks. `readBoard` in
+`app/db.js` dropped its `GROUP BY user_id`/`MAX(score)` and now returns the top 10 individual
+sessions by score, so one player can hold several slots and every attempt competes on its own.
+`me.rank` is now the rank of the caller's best attempt among all attempts (the ahead-count query
+lost its grouped subquery, counts rows directly). The row's secondary cell showed `plays`
+("5 Versuche"); with per-attempt rows that is meaningless, so it now shows the attempt date
+(`toLocaleDateString("pt-BR")`).
+
+Trade-off accepted: a strong player can fill the whole top 10, so "top 10 people" is no longer
+the meaning. That was the explicit choice. Verified the new query against prod D1: the five
+`fahrkarte` attempts come back as separate rows 91/82/79/65/39. Build clean.
+
+Still open (data, not code): the board looks sparse because there is one real player. Seeding
+fictional players per scenario was raised and deferred.
