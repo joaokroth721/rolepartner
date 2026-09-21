@@ -315,7 +315,7 @@ function ScoreBreakdown({ breakdown }) {
   );
 }
 
-function Leaderboard({ score, board, scenario, loading, onContinue }) {
+function Leaderboard({ score, board, scenario, loading, view = false, onContinue }) {
   const medal = medalFor(score);
   const next = nextTier(score);
   const top = board?.top || [];
@@ -324,14 +324,16 @@ function Leaderboard({ score, board, scenario, loading, onContinue }) {
 
   return (
     <div className="eval">
-      <div className={`result-hero score-${scoreClass(score)}`}>
-        <span className={`medal medal-${medal ? medal.key : "none"} medal-lg`} />
-        <div className="result-tier">{medal ? medal.label : "Keine Medaille"}</div>
-        <div className="result-score">{score}<span>/100</span></div>
-        {next && (
-          <div className="result-next">Noch {next.min - score} Punkte bis {next.label}</div>
-        )}
-      </div>
+      {!view && (
+        <div className={`result-hero score-${scoreClass(score)}`}>
+          <span className={`medal medal-${medal ? medal.key : "none"} medal-lg`} />
+          <div className="result-tier">{medal ? medal.label : "Keine Medaille"}</div>
+          <div className="result-score">{score}<span>/100</span></div>
+          {next && (
+            <div className="result-next">Noch {next.min - score} Punkte bis {next.label}</div>
+          )}
+        </div>
+      )}
 
       <div className="lb-head">
         <span>Bestenliste{scenario ? ` · ${scenario}` : ""}</span>
@@ -348,7 +350,7 @@ function Leaderboard({ score, board, scenario, loading, onContinue }) {
             <li key={r.rank} className={`lb-row ${r.me ? "new" : ""}`}>
               <span className="lb-rank">{r.rank}</span>
               <span className="lb-name">{r.me ? "Du" : r.name}</span>
-              <span className="lb-date">{r.plays} {r.plays === 1 ? "Versuch" : "Versuche"}</span>
+              <span className="lb-date">{r.created_at ? new Date(r.created_at).toLocaleDateString("pt-BR") : ""}</span>
               <span className={`lb-score score-badge score-${scoreClass(r.score)}`}>{r.score}</span>
             </li>
           ))}
@@ -360,7 +362,7 @@ function Leaderboard({ score, board, scenario, loading, onContinue }) {
       )}
 
       <div className="btn-row">
-        <button className="btn btn-primary" onClick={onContinue}>Zur Auswertung</button>
+        <button className="btn btn-primary" onClick={onContinue}>{view ? "Zurück" : "Zur Auswertung"}</button>
       </div>
     </div>
   );
@@ -731,8 +733,17 @@ export default function Home() {
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false); // partner voice running; drives the mouth
   const [busy, setBusy] = useState(false);
+  const [suggestEnd, setSuggestEnd] = useState(false); // partner said goodbye: offer to score
   const [error, setError] = useState("");
   const recRef = useRef(null);
+  // The mic re-arms itself from inside SpeechRecognition/utterance callbacks, which close over
+  // stale state. These refs carry the live turn state so the re-arm guard reads the truth.
+  const busyRef = useRef(false);
+  const speakingRef = useRef(false);
+  const wantMicRef = useRef(false); // true while hands-free listening should be running
+  // The hands-free loop calls send() through callbacks frozen at the render it started on, so
+  // send() must read the transcript from a live ref, not its stale `messages` closure.
+  const messagesRef = useRef([]);
   const chatStartedAt = useRef(null);
   const historyAsked = useRef(false);
 
@@ -760,6 +771,10 @@ export default function Home() {
   useEffect(() => {
     if (me?.analyticsId) posthog.identify(me.analyticsId);
   }, [me?.analyticsId]);
+
+  // Keep the ref in step with the state so callers reading messagesRef (the hands-free loop)
+  // see external resets too, e.g. open() clearing the transcript for a new scenario.
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   // The app is a single route, so a pageview says almost nothing. This is the real
   // navigation signal, and registering the screen makes every later event (including
@@ -923,17 +938,36 @@ export default function Home() {
         duration_ms: chatStartedAt.current ? Date.now() - chatStartedAt.current : null,
       });
     }
+    wantMicRef.current = false;
     recRef.current?.abort?.();
     stopSpeaking();
     setScenario(null);
     setListening(false);
     setBusy(false);
+    setSuggestEnd(false);
   }
 
   function startConversation() {
     chatStartedAt.current = Date.now();
     posthog.capture("conversation_started", { scenario_id: scenario.id, level: scenario.level });
     setStage("chat");
+    setSuggestEnd(false);
+    // Called from the "Los geht's" click, so the mic permission prompt rides a user gesture.
+    wantMicRef.current = true;
+    armMic();
+  }
+
+  async function openBoard() {
+    setError("");
+    setBoardBusy(true);
+    setStage("board");
+    try {
+      setBoard(await getJSON(`/api/leaderboard?scenarioId=${scenario.id}`));
+    } catch (e) {
+      setError("Bestenliste konnte nicht geladen werden.");
+    } finally {
+      setBoardBusy(false);
+    }
   }
 
   function speak(text) {
@@ -942,9 +976,11 @@ export default function Home() {
     // The mouth follows the utterance's own lifecycle, not a timer: only these events know
     // when the OS voice really starts and stops. Browsers disagree on what a cancel() fires
     // (end in Chrome, error elsewhere), so both close the mouth.
-    u.onstart = () => setSpeaking(true);
-    u.onend = () => setSpeaking(false);
-    u.onerror = () => setSpeaking(false);
+    u.onstart = () => { speakingRef.current = true; setSpeaking(true); };
+    // The partner finished a line: hand the turn back by re-arming the mic (armMic re-checks
+    // its guards, so a farewell that ended the conversation stays silent).
+    u.onend = () => { speakingRef.current = false; setSpeaking(false); armMic(); };
+    u.onerror = () => { speakingRef.current = false; setSpeaking(false); armMic(); };
     speechSynthesis.speak(u);
   }
 
@@ -952,25 +988,44 @@ export default function Home() {
   // alone would leave the mouth moving if a cancel() silences a voice that never started.
   function stopSpeaking() {
     speechSynthesis.cancel();
+    speakingRef.current = false;
     setSpeaking(false);
   }
 
   async function send(userText) {
-    const next = [...messages, { role: "user", content: userText }];
+    // Read from the ref, not the `messages` closure: the hands-free loop invokes this send()
+    // frozen at an early render, so the closure value is stale but the ref is live.
+    const next = [...messagesRef.current, { role: "user", content: userText }];
+    messagesRef.current = next;
     setMessages(next);
+    // Set the ref synchronously: the recognition's own onend fires right after this and must
+    // see that a turn is now in flight, or it would re-arm the mic mid-request.
+    busyRef.current = true;
     setBusy(true);
     try {
-      const { text } = await postJSON("/api/chat", { messages: next, scenarioId: scenario.id });
-      setMessages([...next, { role: "assistant", content: text }]);
+      const { text, done } = await postJSON("/api/chat", { messages: next, scenarioId: scenario.id });
+      const after = [...next, { role: "assistant", content: text }];
+      messagesRef.current = after;
+      setMessages(after);
       speak(text);
+      // The partner judged the conversation over. Let the farewell finish speaking, but stop
+      // listening now and offer the result instead of scoring behind the user's back.
+      if (done) {
+        wantMicRef.current = false;
+        recRef.current?.abort?.();
+        setSuggestEnd(true);
+      }
     } catch (e) {
       setError("Fehler beim Server: " + e.message);
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
   }
 
   async function endConversation() {
+    wantMicRef.current = false;
+    setSuggestEnd(false);
     recRef.current?.abort?.();
     stopSpeaking();
     setBusy(true);
@@ -1013,21 +1068,37 @@ export default function Home() {
     }
   }
 
-  function listen() {
+  // Hands-free turn loop. The mic re-arms itself between turns and the guard keeps it shut
+  // whenever the partner is speaking or the server is thinking, so it never hears the AI's
+  // own voice through the speakers. Every caller re-checks the guard, so it is safe to call
+  // armMic from any callback that thinks the turn might be the user's again.
+  function armMic() {
+    if (!wantMicRef.current || busyRef.current || speakingRef.current) return;
+    if (recRef.current) return; // one live recognition at a time
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) {
       setError("Dieser Browser unterstützt keine Spracherkennung. Nutze Chrome.");
+      wantMicRef.current = false;
       return;
     }
     const rec = new SR();
     recRef.current = rec;
     rec.lang = "de-DE";
     rec.interimResults = false;
-    rec.onresult = (e) => send(e.results[0][0].transcript);
-    rec.onend = () => setListening(false);
-    rec.onerror = (e) => {
-      setError("Spracherkennung: " + e.error);
+    rec.onresult = (e) => {
+      const t = e.results[0][0].transcript.trim();
+      if (t.length > 1) send(t); // send() flips busyRef, so the onend below won't re-arm mid-turn
+    };
+    rec.onend = () => {
+      recRef.current = null;
       setListening(false);
+      armMic(); // silence with no result: hand the turn back to the user unless one is in flight
+    };
+    rec.onerror = (e) => {
+      recRef.current = null;
+      setListening(false);
+      // no-speech / aborted are normal turn boundaries, not failures worth showing.
+      if (e.error !== "no-speech" && e.error !== "aborted") setError("Spracherkennung: " + e.error);
     };
     setError("");
     setListening(true);
@@ -1411,7 +1482,24 @@ export default function Home() {
             <button className="btn btn-primary" onClick={startConversation}>
               Los geht's
             </button>
+            <button className="btn" onClick={openBoard}>
+              Bestenliste
+            </button>
           </div>
+        </>
+      )}
+
+      {stage === "board" && (
+        <>
+          <h2 style={{ margin: "24px 0 12px" }}>Bestenliste</h2>
+          {error && <p className="error">{error}</p>}
+          <Leaderboard
+            board={board}
+            scenario={scenario.title}
+            loading={boardBusy}
+            view
+            onContinue={() => setStage("intro")}
+          />
         </>
       )}
 
@@ -1419,14 +1507,37 @@ export default function Home() {
         <>
           <p className="subtitle">{scenario.desc}</p>
           <PartnerStage partner={scenario.partner} speaking={speaking} />
-          <div className="btn-row">
-            <button className="btn btn-primary" onClick={listen} disabled={listening || busy}>
-              {listening ? "Höre zu…" : busy ? "…" : "Sprechen"}
-            </button>
-            <button className="btn" onClick={endConversation} disabled={busy || messages.length === 0}>
-              Gespräch beenden
-            </button>
-          </div>
+          <p className="subtitle" style={{ opacity: 0.7, minHeight: "1.2em" }}>
+            {busy ? "Denkt nach…" : speaking ? "Spricht…" : listening ? "Höre zu…" : "…"}
+          </p>
+
+          {suggestEnd ? (
+            <div className="panel">
+              <p>Das Gespräch scheint beendet. Ergebnis ansehen?</p>
+              <div className="btn-row">
+                <button className="btn btn-primary" onClick={endConversation} disabled={busy}>
+                  Ergebnis ansehen
+                </button>
+                <button
+                  className="btn"
+                  onClick={() => {
+                    setSuggestEnd(false);
+                    wantMicRef.current = true;
+                    armMic();
+                  }}
+                  disabled={busy}
+                >
+                  Weiter reden
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="btn-row">
+              <button className="btn" onClick={endConversation} disabled={busy || messages.length === 0}>
+                Gespräch beenden
+              </button>
+            </div>
+          )}
 
           {error && <p className="error">{error}</p>}
 

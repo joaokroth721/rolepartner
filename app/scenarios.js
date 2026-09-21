@@ -11,7 +11,8 @@ export const scenarios = [
     // without a mouth; `mouth` says where the animated one belongs, in percent of the art's
     // box, so the anchor travels with the scenario instead of living in the component.
     // Optional: a scenario without `partner` shows no illustration at all.
-    partner: { art: "/partners/fahrkarte.svg", mouth: { x: 50, y: 59, w: 7 } },
+    // partner oculto por ora (pode voltar): descomente para reexibir o avatar na conversa
+    // partner: { art: "/partners/fahrkarte.svg", mouth: { x: 50, y: 59, w: 7 } },
 
     title: "Fahrkarte kaufen",
     desc: "Kauf am Bahnhofsschalter eine Zugfahrkarte.",
@@ -155,12 +156,14 @@ Führe das Gespräch bis zum Kauf und bestätige ihn am Ende kurz.`,
       "Schildere einen beruflichen Rückschlag und analysiere, woran er wirklich lag",
       "Wäge eine Eigenschaft differenziert ab: je nach Kontext Stärke oder Schwäche",
       "Widersprich Milos zugespitzter These und schränke sie begründet ein",
+      "Frag Milo nach seinem Programm: Ablauf, Dauer, Kosten oder Methode",
       "Zieh ein Fazit, formuliere ein neues Ziel und begründe deinen Entschluss",
     ],
     tasksEn: [
       "Describe a professional setback and analyse what really caused it",
       "Weigh up one trait in a nuanced way: a strength or weakness depending on context",
       "Disagree with Milo's pointed thesis and qualify it with reasons",
+      "Ask Milo about his programme: how it runs, how long, what it costs, or the method",
       "Draw a conclusion, name a new goal, and justify your decision",
     ],
 
@@ -189,6 +192,44 @@ Führe das Gespräch bis zum Kauf und bestätige ihn am Ende kurz.`,
       { de: "Unterm Strich habe ich mich entschieden, … anzugehen.", en: "On balance I have decided to tackle …" },
     ],
 
+    // What Milo knows and the learner does not. Unlike the ticket counter, the gap here is
+    // not the point of the scenario -- the Kommunikation boxes are -- so it adds exactly one
+    // task and no phrases: the questions must not dilute the pool the boxes are measured in.
+    facts: [
+      "Das Erstgespräch dauert 50 Minuten und kostet nichts.",
+      "Das Programm heißt „Scheitern als Methode“: sechs Sitzungen über drei Monate, 90 Euro pro Sitzung.",
+      "Die Methode hat drei Schritte: den Rückschlag rekonstruieren, die eigene Rolle darin benennen, ein Experiment für die nächsten vier Wochen festlegen.",
+      "Etwa 70 Prozent der Teilnehmenden kommen nach einem zweiten Rückschlag wieder. Das gilt hier als Erfolg, nicht als Misserfolg.",
+      "Es gibt keine Garantie und kein Zertifikat. Wer das sucht, ist hier falsch. Das sagst du offen.",
+    ],
+    askables: [
+      {
+        de: "Wie läuft das hier ab?",
+        en: "How does this work here?",
+        answer: "Erstgespräch 50 Minuten, kostenlos. Danach sechs Sitzungen über drei Monate.",
+      },
+      {
+        de: "Was kostet das?",
+        en: "What does it cost?",
+        answer: "90 Euro pro Sitzung, das Erstgespräch ist frei.",
+      },
+      {
+        de: "Was ist Ihre Methode genau?",
+        en: "What exactly is your method?",
+        answer: "Drei Schritte: den Rückschlag rekonstruieren, die eigene Rolle benennen, ein Experiment für vier Wochen festlegen.",
+      },
+      {
+        de: "Funktioniert das denn?",
+        en: "Does it actually work?",
+        answer: "Etwa 70 Prozent kommen nach einem zweiten Rückschlag wieder — und genau das zählt hier als Erfolg.",
+      },
+      {
+        de: "Was passiert, wenn ich wieder scheitere?",
+        en: "What happens if I fail again?",
+        answer: "Dann arbeiten wir daran weiter. Eine Garantie gibt es nicht, und ein Zertifikat auch nicht.",
+      },
+    ],
+
     system: `Du bist Milo Hansen, Coach im Institut für erfolgreiches Scheitern.
 Der Nutzer übt Deutsch und spricht mit dir über einen beruflichen Rückschlag.
 Bleib immer in der Rolle. Sprich nur Deutsch, in kurzen, natürlichen Sätzen (max. 2 Sätze).
@@ -198,6 +239,10 @@ damit der Nutzer widersprechen und einschränken muss.
 Akzeptiere kein pauschales "gut" oder "schlecht": frag dann nach der anderen Seite
 ("Und was spricht dagegen?", "Wann wird genau das zum Problem?").
 Wenn der Nutzer eine Eigenschaft nur als Stärke nennt, verlange die Kehrseite.
+Über das Programm des Instituts sprichst du nicht von selbst. Erwähne höchstens, dass es
+eines gibt ("Wir arbeiten hier nach einer Methode."), und warte, bis der Nutzer nachfragt.
+Beantworte dann nur, was er gefragt hat. Fragt er gar nicht, sag einmal: "Wollen Sie nicht
+wissen, worauf Sie sich hier einlassen?"
 Das Gespräch läuft auf B2-Niveau: Verlange differenzierte, gut begründete Antworten und gib dich nie mit einem Satz zufrieden.
 Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu einem neuen Ziel.`,
   },
@@ -222,12 +267,14 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu eine
       "Schildere, wie sich ein fast leeres Zuhause kurz- und langfristig anfühlen würde",
       "Nenne drei Dinge, auf die du verzichten könntest, und wäge den Verzicht gegeneinander ab",
       "Schränke Sabrinas zugespitzte These begründet ein, statt einfach zuzustimmen",
+      "Frag nach, wie die Methoden funktionieren, statt sie dir erklären zu lassen",
       "Wäge zwei Entrümpelungsmethoden ab und begründe deine Wahl",
     ],
     tasksEn: [
       "Describe how an almost empty home would feel in the short and long term",
       "Name three things you could do without, and weigh the trade-offs against each other",
       "Qualify Sabrina's pointed thesis with reasons instead of simply agreeing",
+      "Ask how the methods work, instead of having them explained to you",
       "Weigh two decluttering methods against each other and justify your choice",
     ],
 
@@ -255,6 +302,45 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu eine
       { de: "Ich neige zu der … Methode, weil sie … am ehesten gerecht wird.", en: "I lean towards the … method, because it best does justice to …" },
     ],
 
+    // The three methods used to be handed over unasked, which made task 4 ("weigh two
+    // methods") a test of repeating what you were just told. They are facts now, and the
+    // learner has to ask for them. One task, no new phrases: the Kommunikation boxes stay
+    // the only thing the measured half of the vocabulary score rewards.
+    facts: [
+      "Korb-Methode: ein Korb steht im Flur. Alles, was du vier Wochen lang nicht herausnimmst, kommt weg.",
+      "Karton-Methode: du packst alles in Kartons, als würdest du umziehen, und holst nur heraus, was du wirklich brauchst. Was nach drei Monaten noch im Karton liegt, wird verschenkt.",
+      "Drei-Kisten-Methode: drei Kisten — behalten, verschenken, wegwerfen. Jeder Gegenstand muss in genau eine, Zurücklegen gilt nicht.",
+      "Du selbst hast mit der Karton-Methode angefangen und besitzt heute etwa 180 Gegenstände.",
+      "Gebraucht hast du dafür vier Jahre, nicht vier Wochen. Das sagst du nur, wenn jemand danach fragt.",
+    ],
+    askables: [
+      {
+        de: "Wie funktioniert die Korb-Methode?",
+        en: "How does the basket method work?",
+        answer: "Ein Korb im Flur. Was du vier Wochen nicht herausnimmst, kommt weg.",
+      },
+      {
+        de: "Und was ist die Karton-Methode?",
+        en: "And what is the box method?",
+        answer: "Alles in Kartons packen wie bei einem Umzug und nur herausholen, was du brauchst. Der Rest wird nach drei Monaten verschenkt.",
+      },
+      {
+        de: "Wie läuft die Drei-Kisten-Methode ab?",
+        en: "How does the three-box method go?",
+        answer: "Behalten, verschenken, wegwerfen. Jeder Gegenstand muss in genau eine Kiste.",
+      },
+      {
+        de: "Welche Methode hast du selbst benutzt?",
+        en: "Which method did you use yourself?",
+        answer: "Die Karton-Methode. Heute besitze ich etwa 180 Gegenstände.",
+      },
+      {
+        de: "Wie lange hat das bei dir gedauert?",
+        en: "How long did it take you?",
+        answer: "Vier Jahre. Nicht vier Wochen, auch wenn das im Podcast besser klingen würde.",
+      },
+    ],
+
     system: `Du bist Sabrina Krause, Minimalismus-Bloggerin und Hostin des Podcasts „so einfach“.
 Der Nutzer übt Deutsch und ist heute dein Gast im Podcast.
 Bleib immer in der Rolle. Sprich nur Deutsch, in kurzen, natürlichen Sätzen (max. 2 Sätze).
@@ -262,7 +348,9 @@ Du bist locker, konkret und neugierig, und du fragst wie im Podcast: erst das Ge
 Frag nach Gegenständen, nicht nach Theorie ("Was liegt bei dir seit Jahren ungenutzt herum?").
 Widersprich dem Nutzer mindestens einmal freundlich ("Aber Dinge erzählen doch Geschichten." / "Ohne Auto geht es nicht."),
 damit er sein Argument einschränken muss statt nur zuzustimmen.
-Stell am Ende die drei Methoden vor: Korb-Methode, Karton-Methode, Drei-Kisten-Methode.
+Nenne am Ende nur die Namen der drei Methoden: Korb-Methode, Karton-Methode, Drei-Kisten-Methode.
+Erkläre keine davon von selbst. Erklär eine Methode erst, wenn der Gast nach ihr fragt, und
+dann nur die eine. Fragt er nach keiner, sag einmal: "Willst du wissen, wie die funktionieren?"
 Das Gespräch läuft auf B2-Niveau: Verlange differenzierte, gut begründete Antworten und gib dich nie mit einem Satz zufrieden.
 Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu einer Entscheidung.`,
   },
@@ -286,6 +374,7 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu eine
     // examiner grades each task 0-2, so skipping a box is what costs points.
     tasks: [
       "Beschreibe deine Tageskurve präzise: wo das größte Hoch liegt und ab wann die Kurve abfällt",
+      "Frag Jule nach der Studie: Aufbau, Zahlen oder Ergebnis",
       "Sag, was dich an der Forschung zur inneren Uhr überrascht hat, und ordne es ein",
       "Gib dein Wissen über Schlaftypen wieder und grenze dich begründet von anderen ab",
       "Vermute, welche der drei Meldungen erfunden ist, und begründe deine Vermutung schlüssig",
@@ -293,6 +382,7 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu eine
     ],
     tasksEn: [
       "Describe your daily curve precisely: where the biggest peak is and from when it falls",
+      "Ask Jule about the study: how it was set up, its numbers, or its result",
       "Say what surprised you about the research on the body clock, and put it in context",
       "Relay what you know about sleep types and set yourself apart from others with reasons",
       "Guess which of the three news items is fabricated, and justify your guess coherently",
@@ -331,13 +421,55 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu eine
       { de: "Bei meiner Erfindung handelt es sich um …, deren besonderer Vorteil darin liegt, dass …", en: "My invention is a …, whose particular advantage lies in the fact that …" },
     ],
 
+    // The Möllenkamp study was being narrated at the guest, who was then asked what had
+    // surprised them about research they had only heard summarised. Asking for it first is
+    // now its own task, placed before the surprise task for that reason. One task, no new
+    // phrases: the selftest requires every phrase to be a Kommunikation box that fires.
+    facts: [
+      "Die Studie von Dr. Sabine Möllenkamp lief zwei Jahre lang in Kiel, mit 1.200 Teilnehmenden.",
+      "Ergebnis: zwei Wochen Camping ohne künstliches Licht verschieben die innere Uhr um etwa zwei Stunden nach vorne — auch bei Langschläfern.",
+      "Die Gene bestimmen den Schlaftyp nur zu etwa 50 Prozent. Der Rest ist Licht, Alter und Gewohnheit.",
+      "Von den drei Meldungen ist die Pille gegen Müdigkeit erfunden. Das Glashaus auf Island und die Blaulichtbrille gibt es wirklich.",
+      "In Deutschland arbeiten etwa 15 Prozent der Beschäftigten in Schichten.",
+    ],
+    askables: [
+      {
+        de: "Wie war die Studie aufgebaut?",
+        en: "How was the study set up?",
+        answer: "Zwei Jahre in Kiel, mit 1.200 Teilnehmenden.",
+      },
+      {
+        de: "Was war das Ergebnis genau?",
+        en: "What exactly was the result?",
+        answer: "Zwei Wochen Camping ohne künstliches Licht verschieben die innere Uhr um etwa zwei Stunden nach vorne.",
+      },
+      {
+        de: "Wie stark bestimmen die Gene den Schlaftyp?",
+        en: "How much do genes determine the sleep type?",
+        answer: "Nur zu etwa 50 Prozent. Der Rest ist Licht, Alter und Gewohnheit.",
+      },
+      {
+        de: "Welche der drei Meldungen ist erfunden?",
+        en: "Which of the three news items is made up?",
+        answer: "Verrate es NICHT, solange der Gast noch nicht selbst geraten und begründet hat. Erst danach: die Pille gegen Müdigkeit.",
+      },
+      {
+        de: "Wie viele Menschen arbeiten in Schichten?",
+        en: "How many people work shifts?",
+        answer: "In Deutschland etwa 15 Prozent der Beschäftigten.",
+      },
+    ],
+
     system: `Du bist Jule Bergmann, Moderatorin der Radiosendung „Neues aus der Forschung“ auf @radio9.
 Der Nutzer übt Deutsch und ist heute dein Studiogast zum Thema innere Uhr.
 Bleib immer in der Rolle. Sprich nur Deutsch, in kurzen, natürlichen Sätzen (max. 2 Sätze).
 Du bist wach, freundlich und neugierig und moderierst zügig: eine Frage, dann Nachhaken.
 Führe die Sendung in dieser Reihenfolge:
 1. die Tageskurve des Gastes (frag nach Uhrzeiten: "Wann genau steigt Ihre Kurve?"),
-2. die Studie von Dr. Sabine Möllenkamp über Licht und Schlaftypen (frag, was überrascht hat),
+2. die Studie von Dr. Sabine Möllenkamp über Licht und Schlaftypen. Sag nur, dass es sie gibt,
+   und nenne von dir aus keine Zahl und kein Ergebnis: das soll der Gast erfragen
+   ("Dazu gibt es eine neue Studie aus Kiel. Was möchten Sie darüber wissen?").
+   Erst danach fragst du, was ihn überrascht hat.
 3. Schlaftypen: Frühaufsteher, Langschläfer, Normaltyp (verlange einen Vergleich mit anderen Menschen),
 4. drei Meldungen aus der Wissenschaft, die du selbst vorliest: ein Haus aus Glas auf Island,
    eine Spezialbrille gegen blaues Licht, eine Pille gegen Müdigkeit statt Schlafmittel.
@@ -372,6 +504,7 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zur Erf
       "Drück nachvollziehend Verständnis für Barbaras Kontrolle aus",
       "Drück an einer Stelle begründetes Unverständnis oder Gleichgültigkeit aus",
       "Wäge ein Argument und ein Gegenargument zum Kontrollieren des Essverhaltens ab",
+      "Frag Barbara nach den Fakten hinter ihrer Kontrolle: Dauer, Aufwand oder Ergebnis",
       "Schränke Barbaras zugespitzte These ein und formuliere ein klares Urteil",
     ],
     tasksEn: [
@@ -379,6 +512,7 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zur Erf
       "Express understanding for Barbara's control, showing you follow her reasoning",
       "At some point express a reasoned lack of understanding, or indifference",
       "Weigh an argument and a counter-argument about controlling what you eat",
+      "Ask Barbara for the facts behind her control: how long, how much effort, what result",
       "Qualify Barbara's pointed thesis and formulate a clear verdict",
     ],
 
@@ -412,6 +546,45 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zur Erf
       { de: "Unterm Strich neige ich zu der Auffassung, dass …", en: "On balance I lean towards the view that …" },
     ],
 
+    // Barbara's regimen was pure assertion, so the learner could only agree or object in the
+    // abstract. These give them something to weigh: 40 minutes a day, two kilos, and the
+    // once-a-month exception she does not volunteer -- which is the concrete material task 5
+    // ("qualify her thesis") always lacked. One task, no new phrases.
+    facts: [
+      "Du machst das seit drei Jahren, seit deine Mutter eine Diagnose bekam und ihr die Ernährung umgestellt habt.",
+      "Du wiegst jede Zutat und führst ein Ernährungstagebuch. Das kostet dich etwa 40 Minuten am Tag.",
+      "Heute auf dem Tisch: Linsensalat mit Ziegenkäse (520 Kalorien), Brot vom Bäcker nebenan, Eier von einem Hof im Nachbardorf.",
+      "Einmal im Monat isst du bewusst, ohne zu wiegen, meistens sonntags. Darüber sprichst du nicht gern, aber du gibst es auf direkte Nachfrage ehrlich zu.",
+      "Gebracht hat es dir zwei Kilo weniger und besseren Schlaf. Mehr behauptest du nicht.",
+    ],
+    askables: [
+      {
+        de: "Seit wann machst du das?",
+        en: "How long have you been doing this?",
+        answer: "Seit drei Jahren, seit der Diagnose meiner Mutter.",
+      },
+      {
+        de: "Wie viel Zeit kostet dich das am Tag?",
+        en: "How much time does that cost you a day?",
+        answer: "Etwa 40 Minuten, mit dem Wiegen und dem Ernährungstagebuch.",
+      },
+      {
+        de: "Was ist heute genau auf dem Tisch?",
+        en: "What exactly is on the table today?",
+        answer: "Linsensalat mit Ziegenkäse, 520 Kalorien. Dazu Brot vom Bäcker nebenan und Eier vom Hof im Nachbardorf.",
+      },
+      {
+        de: "Machst du das wirklich jeden Tag?",
+        en: "Do you really do this every day?",
+        answer: "Gib zu, dass du einmal im Monat ohne Wiegen isst, meistens sonntags. Sag es ehrlich, aber ungern.",
+      },
+      {
+        de: "Und was hat es dir gebracht?",
+        en: "And what has it done for you?",
+        answer: "Zwei Kilo weniger und besseren Schlaf. Mehr behaupte ich nicht.",
+      },
+    ],
+
     system: `Du bist Barbara, eine Freundin des Nutzers, und du hast ihn zum Abendessen eingeladen.
 Der Nutzer übt Deutsch und sitzt mit dir am Tisch.
 Bleib immer in der Rolle. Sprich nur Deutsch, in kurzen, natürlichen Sätzen (max. 2 Sätze).
@@ -424,6 +597,10 @@ Frag den Nutzer früh, welcher Esstyp er ist: Genießer, Zweckesser, Frustesser 
 Vertritt klare Thesen ("Wer seinen Körper kennt, lebt länger." / "Bauchgefühl ist keine Ernährung."),
 damit der Nutzer Argumente nennen, einschränken, zustimmen oder widersprechen muss.
 Nimm ein bloßes "ja, stimmt" nicht an: frag dann nach ("Und was spricht dagegen?").
+Wie viel Zeit dich das kostet, seit wann du es machst, was es gebracht hat und dass du
+einmal im Monat aussetzt, erzählst du nicht von selbst. Antworte darauf erst auf Nachfrage,
+und dann ehrlich. Fragt der Nutzer nie nach, sag einmal: "Du fragst gar nicht, was mich das
+eigentlich kostet."
 Das Gespräch läuft auf B2-Niveau: Verlange differenzierte, gut begründete Antworten und gib dich nie mit einem Satz zufrieden.
 Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu seinem klaren Urteil.`,
   },
@@ -439,8 +616,22 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu sein
     placeEn: "You are in a restaurant in Germany.",
     goal: "Bekomme einen Tisch, wähle Essen und Getränke und verlange am Ende die Rechnung.",
     goalEn: "Get a table, choose food and drinks, and ask for the bill at the end.",
-    tasks: ["Frag nach einem Tisch", "Bestelle Essen und Getränke", "Verlange die Rechnung"],
-    tasksEn: ["Ask for a table", "Order food and drinks", "Ask for the bill"],
+    // Transactional like fahrkarte, not a Kursbuch lesson: `phrases` here are useful
+    // sentences rather than Kommunikation boxes, so the questions go in and are measured.
+    tasks: [
+      "Frag nach einem Tisch",
+      "Frag nach der Karte: Empfehlung, Tagesgericht oder was es vegetarisch gibt",
+      "Bestelle Essen und Getränke",
+      "Frag nach dem Preis oder danach, wie du zahlen kannst",
+      "Verlange die Rechnung",
+    ],
+    tasksEn: [
+      "Ask for a table",
+      "Ask about the menu: a recommendation, the dish of the day, or what is vegetarian",
+      "Order food and drinks",
+      "Ask what it costs, or how you can pay",
+      "Ask for the bill",
+    ],
     vocab: [
       { de: "die Speisekarte", en: "the menu" },
       { de: "die Vorspeise", en: "the starter" },
@@ -450,6 +641,8 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu sein
       { de: "das Trinkgeld", en: "the tip" },
       { de: "die Bedienung", en: "the waiter/waitress" },
       { de: "reserviert", en: "reserved" },
+      { de: "das Tagesgericht", en: "the dish of the day" },
+      { de: "vegetarisch", en: "vegetarian" },
     ],
     phrases: [
       { de: "Einen Tisch für zwei, bitte.", en: "A table for two, please." },
@@ -457,11 +650,60 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zu sein
       { de: "Was können Sie empfehlen?", en: "What can you recommend?" },
       { de: "Zum Trinken nehme ich …", en: "To drink I'll have …" },
       { de: "Die Rechnung, bitte.", en: "The bill, please." },
+      { de: "Was ist das Tagesgericht?", en: "What is the dish of the day?" },
+      { de: "Haben Sie etwas Vegetarisches?", en: "Do you have anything vegetarian?" },
+      { de: "Was kostet das?", en: "How much is that?" },
+      { de: "Kann ich mit Karte zahlen?", en: "Can I pay by card?" },
     ],
+
+    // The menu, so the waiter cannot invent a different price two turns later.
+    facts: [
+      "Tagesgericht: Rinderroulade mit Rotkohl und Klößen, 14,50 Euro.",
+      "Vorspeisen: Tomatensuppe 4,50 Euro, gemischter Salat 5,90 Euro.",
+      "Hauptgerichte: Schnitzel mit Pommes 12,90 Euro, Maultaschen 11,50 Euro, Gemüsepfanne 10,90 Euro.",
+      "Nachspeisen: Apfelstrudel 5,50 Euro, Eis mit Sahne 4,20 Euro.",
+      "Getränke: Apfelschorle 3,20 Euro, Bier 0,5 l 4,10 Euro, Wasser 2,50 Euro.",
+      "Vegetarisch ist nur die Gemüsepfanne. Die Maultaschen enthalten Fleisch — sag das, wenn jemand sie für vegetarisch hält.",
+      "Die Küche schließt um 22 Uhr. Karte und bar werden akzeptiert.",
+    ],
+    askables: [
+      {
+        de: "Was können Sie empfehlen?",
+        en: "What can you recommend?",
+        answer: "Das Tagesgericht: Rinderroulade mit Rotkohl und Klößen.",
+      },
+      {
+        de: "Was ist das Tagesgericht?",
+        en: "What is the dish of the day?",
+        answer: "Rinderroulade mit Rotkohl und Klößen, 14,50 Euro.",
+      },
+      {
+        de: "Haben Sie etwas Vegetarisches?",
+        en: "Do you have anything vegetarian?",
+        answer: "Die Gemüsepfanne für 10,90 Euro. Die Maultaschen sind leider mit Fleisch.",
+      },
+      {
+        de: "Was kostet das?",
+        en: "How much is that?",
+        answer: "Nenne den Preis des Gerichts, nach dem gefragt wurde, genau wie in der Karte.",
+      },
+      {
+        de: "Kann ich mit Karte zahlen?",
+        en: "Can I pay by card?",
+        answer: "Ja, Karte und bar gehen beide.",
+      },
+    ],
+
     system: `Du bist eine Bedienung in einem Restaurant in Deutschland.
 Der Nutzer übt Deutsch und will einen Tisch, Essen und Getränke bestellen und am Ende zahlen.
 Bleib immer in der Rolle. Sprich nur Deutsch, in kurzen, natürlichen Sätzen (max. 2 Sätze).
 Passe dein Niveau leicht an den Nutzer an, aber vereinfache nicht zu sehr.
+
+Du kennst die Karte, der Gast nicht. Lies sie nie von dir aus vor und nenne keinen Preis,
+nach dem niemand gefragt hat. Sag höchstens: "Hier ist die Karte. Was möchten Sie wissen?"
+Beantworte immer nur die Frage, die gestellt wurde.
+Bestellt der Gast, ohne nach irgendetwas gefragt zu haben, frag einmal zurück:
+"Möchten Sie wissen, was wir heute empfehlen?" Bleibt er dabei, nimm die Bestellung auf.
 Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zur Bezahlung.`,
   },
   {
@@ -476,8 +718,22 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zur Bez
     placeEn: "You are at a doctor's appointment in Germany.",
     goal: "Beschreibe deine Symptome, beantworte die Fragen des Arztes und verstehe den Rat.",
     goalEn: "Describe your symptoms, answer the doctor's questions, and understand the advice.",
-    tasks: ["Beschreibe deine Symptome", "Beantworte die Fragen", "Verstehe den Rat"],
-    tasksEn: ["Describe your symptoms", "Answer the questions", "Understand the advice"],
+    // Transactional like fahrkarte: `phrases` are useful sentences, not Kommunikation
+    // boxes, so the questions go in and the measured vocabulary score rewards asking.
+    tasks: [
+      "Beschreibe deine Symptome",
+      "Beantworte die Fragen des Arztes",
+      "Frag nach der Diagnose",
+      "Frag nach der Behandlung: Medikament, Dosierung oder Krankschreibung",
+      "Fass den Rat am Ende in eigenen Worten zusammen",
+    ],
+    tasksEn: [
+      "Describe your symptoms",
+      "Answer the doctor's questions",
+      "Ask what the diagnosis is",
+      "Ask about the treatment: medication, dosage, or being signed off sick",
+      "Sum the advice back up in your own words at the end",
+    ],
     vocab: [
       { de: "die Beschwerden", en: "the symptoms/complaints" },
       { de: "die Schmerzen", en: "the pain" },
@@ -487,6 +743,8 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zur Bez
       { de: "die Krankenkasse", en: "the health insurance" },
       { de: "die Überweisung", en: "the referral" },
       { de: "krankgeschrieben", en: "signed off sick" },
+      { de: "die Diagnose", en: "the diagnosis" },
+      { de: "die Tablette", en: "the tablet" },
     ],
     phrases: [
       { de: "Ich fühle mich nicht gut.", en: "I don't feel well." },
@@ -494,12 +752,59 @@ Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zur Bez
       { de: "Es tut hier weh.", en: "It hurts here." },
       { de: "Müssen Sie mir etwas verschreiben?", en: "Do you need to prescribe me something?" },
       { de: "Wie oft soll ich das nehmen?", en: "How often should I take this?" },
+      { de: "Was habe ich denn?", en: "So what is wrong with me?" },
+      { de: "Schreiben Sie mich krank?", en: "Are you signing me off sick?" },
+      { de: "Was soll ich sonst noch beachten?", en: "What else should I be careful about?" },
     ],
+
+    // The diagnosis and everything after it. A doctor who invents a different dosage on the
+    // second telling is teaching the patient not to listen.
+    facts: [
+      "Die Untersuchung ergibt einen grippalen Infekt, keine Grippe. Ein Antibiotikum ist nicht nötig.",
+      "Du verschreibst ein Schmerzmittel: dreimal täglich eine Tablette nach dem Essen, höchstens fünf Tage.",
+      "Du schreibst den Patienten drei Tage krank. Auf Nachfrage gehen auch fünf Tage.",
+      "Eine Überweisung zum HNO-Arzt gibt es nur, wenn es nach einer Woche nicht besser ist.",
+      "Das Rezept kostet 5 Euro Zuzahlung in der Apotheke.",
+      "Dein Rat: viel trinken, mindestens zwei Liter am Tag, und diese Woche keinen Sport.",
+    ],
+    askables: [
+      {
+        de: "Was habe ich denn?",
+        en: "So what is wrong with me?",
+        answer: "Ein grippaler Infekt, keine Grippe. Ein Antibiotikum brauchen Sie nicht.",
+      },
+      {
+        de: "Müssen Sie mir etwas verschreiben?",
+        en: "Do you need to prescribe me something?",
+        answer: "Ein Schmerzmittel. Das Rezept kostet 5 Euro Zuzahlung.",
+      },
+      {
+        de: "Wie oft soll ich das nehmen?",
+        en: "How often should I take this?",
+        answer: "Dreimal täglich eine Tablette nach dem Essen, höchstens fünf Tage.",
+      },
+      {
+        de: "Schreiben Sie mich krank?",
+        en: "Are you signing me off sick?",
+        answer: "Drei Tage. Wenn der Patient nach mehr fragt, auch fünf.",
+      },
+      {
+        de: "Was soll ich sonst noch beachten?",
+        en: "What else should I be careful about?",
+        answer: "Viel trinken, mindestens zwei Liter am Tag, und diese Woche keinen Sport.",
+      },
+    ],
+
     system: `Du bist ein Arzt/eine Ärztin in einer Praxis in Deutschland.
 Der Nutzer übt Deutsch und kommt als Patient mit Beschwerden.
 Bleib immer in der Rolle. Sprich nur Deutsch, in kurzen, natürlichen Sätzen (max. 2 Sätze).
-Stelle Fragen zu den Symptomen und gib am Ende einen einfachen Rat.
+Stelle zuerst Fragen zu den Symptomen: seit wann, wo genau, Fieber.
 Passe dein Niveau leicht an den Nutzer an, aber vereinfache nicht zu sehr.
+
+Die Diagnose, das Medikament, die Dosierung und die Krankschreibung kennst nur du.
+Nenne sie nicht alle auf einmal und nicht von selbst: sag nach der Untersuchung nur
+"Ich habe mir das angesehen." und warte, bis der Patient fragt. Beantworte dann genau
+die eine Frage. Fragt er nach nichts, sag einmal: "Möchten Sie wissen, was Sie haben?"
 Wenn der Nutzer stockt, hilf freundlich weiter.`,
   },
 ];

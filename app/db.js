@@ -193,22 +193,22 @@ export async function currentStreak(db, userId) {
 }
 
 /**
- * Top 10 by each player's best score, plus where the caller stands.
+ * Top 10 individual attempts by score, plus where the caller stands.
  *
- * This is the one query that reads across all users, so it is the only place a person sees
- * anything of anyone else: a display name (or "Anonym" before login) and a score.
- * `scenarioId` narrows it to one scenario; omitted, it ranks across the whole app.
+ * Each row is one conversation (attempt), not one player, so the same person can hold
+ * several slots. This is the one query that reads across all users, so it is the only place
+ * a person sees anything of anyone else: a display name (or "Anonym" before login), a score
+ * and the date of that attempt. `scenarioId` narrows it to one scenario; omitted, it ranks
+ * across the whole app. `me.rank` is the rank of the caller's best attempt among all attempts.
  */
 export async function readBoard(db, { scenarioId = null, userId = null } = {}) {
   const where = scenarioId ? "WHERE s.scenario_id = ?" : "";
   const top = await db
     .prepare(
-      `SELECT s.user_id AS id, u.name AS name, MAX(s.score) AS score,
-              COUNT(*) AS plays, MIN(s.created_at) AS first_at
+      `SELECT s.user_id AS id, u.name AS name, s.score AS score, s.created_at AS created_at
          FROM sessions s JOIN users u ON u.id = s.user_id
          ${where}
-        GROUP BY s.user_id
-        ORDER BY score DESC, first_at ASC
+        ORDER BY s.score DESC, s.created_at ASC
         LIMIT 10`
     )
     .bind(...(scenarioId ? [scenarioId] : []))
@@ -218,7 +218,7 @@ export async function readBoard(db, { scenarioId = null, userId = null } = {}) {
     rank: i + 1,
     name: r.name || "Anonym",
     score: r.score,
-    plays: r.plays,
+    created_at: r.created_at,
     me: userId != null && r.id === userId,
   }));
 
@@ -233,10 +233,7 @@ export async function readBoard(db, { scenarioId = null, userId = null } = {}) {
     if (mine?.best != null) {
       const ahead = await db
         .prepare(
-          `SELECT COUNT(*) AS n FROM (
-             SELECT user_id, MAX(score) AS best FROM sessions ${scenarioId ? "WHERE scenario_id = ?" : ""}
-             GROUP BY user_id
-           ) WHERE best > ?`
+          `SELECT COUNT(*) AS n FROM sessions ${scenarioId ? "WHERE scenario_id = ? AND" : "WHERE"} score > ?`
         )
         .bind(...(scenarioId ? [scenarioId, mine.best] : [mine.best]))
         .first();

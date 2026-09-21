@@ -3,7 +3,7 @@
 // node app/scoring.selftest.mjs
 import assert from "node:assert";
 import { computeScore, targetsUsed, WEIGHTS } from "./scoring.js";
-import { byId } from "./scenarios.js";
+import { byId, scenarios } from "./scenarios.js";
 
 const scenario = byId("fahrkarte");
 const turns = (n) => Array.from({ length: n }, (_, i) => ({ role: "user", content: `Satz ${i}` }));
@@ -160,15 +160,18 @@ assert.equal(silent.targetsUsed.length, 0, "a learner who asks nothing hits none
 // number, so this asserts the forcing function rather than trusting the briefing.
 const coaching = byId("coaching");
 const coachingJudgement = {
-  goalCompletion: 3, taskResults: [2, 2, 2, 2], grammar: 4, vocab: 4, interaction: 4, corrections: [],
+  goalCompletion: 3, taskResults: [2, 2, 2, 2, 2], grammar: 4, vocab: 4, interaction: 4, corrections: [],
 };
+// Rewritten for the B2.1 phrases: 41260d8 replaced the einerseits/andererseits register
+// with subjunctive-II hedging and left these sentences (and the assertion below) behind,
+// which is why this file failed for a day. Every line is a filled-in template.
 const hedged = [
-  { role: "user", content: "Ich bin mit meiner Firma gescheitert. Das war eine echte Niederlage." },
-  { role: "user", content: "Einerseits ist es positiv, dass ich genau plane, andererseits ist es problematisch, wenn ich zu langsam werde." },
-  { role: "user", content: "Das stimmt schon, aber so einfach ist das leider nicht." },
-  { role: "user", content: "Man kann zwar sagen, dass Ehrgeiz hilft, allerdings muss man auch bedenken, dass er schadet." },
-  { role: "user", content: "Kritisch wird es aber, wenn niemand Hilfe leistet." },
-  { role: "user", content: "Ich habe einen Entschluss gefasst: Das Scheitern wird mein Sprungbrett." },
+  { role: "user", content: "Rückblickend würde ich sagen, dass mein Scheitern weniger an der Idee lag als vielmehr an meiner Planung." },
+  { role: "user", content: "Was auf den ersten Blick wie eine Stärke wirkt, kann sich unter Druck als Schwäche erweisen." },
+  { role: "user", content: "Man müsste hier differenzieren: In dem einen Kontext ist Ehrgeiz hilfreich, in dem anderen eher hinderlich." },
+  { role: "user", content: "Das mag im Prinzip zutreffen, greift meiner Ansicht nach aber zu kurz." },
+  { role: "user", content: "Gerade weil ich ehrgeizig bin, laufe ich Gefahr, mich zu übernehmen." },
+  { role: "user", content: "Unterm Strich habe ich mich entschieden, das Projekt noch einmal anzugehen." },
 ];
 const flat = [
   { role: "user", content: "Meine Firma ist kaputt gegangen. Das war schlecht." },
@@ -184,17 +187,19 @@ assert.ok(
   hedgedRun.score > flatRun.score,
   `qualifying an argument must beat a flat one (${hedgedRun.score} vs ${flatRun.score})`
 );
-assert.ok(
-  hedgedRun.targetsUsed.some((t) => t.startsWith("Einerseits")),
-  "the einerseits/andererseits phrase must register from a natural sentence, not only verbatim"
-);
+for (const phrase of coaching.phrases) {
+  assert.ok(
+    hedged.some((m) => targetsUsed(coaching, m.content).includes(phrase.de)),
+    `coaching: no sentence triggers the B2.1 phrase "${phrase.de.slice(0, 50)}"`
+  );
+}
 assert.equal(flatRun.targetsUsed.length, 0, "a flat conversation hits none of the target phrases");
 
 // Skipping the two tasks that ask for the hedging costs points of its own, on top.
 const flatSkipped = computeScore({
   scenario: coaching,
   messages: flat,
-  judgement: { ...coachingJudgement, taskResults: [2, 0, 0, 2] },
+  judgement: { ...coachingJudgement, taskResults: [2, 0, 0, 0, 2] },
 });
 assert.ok(flatSkipped.score < flatRun.score, "tasks the student skipped must cost points");
 
@@ -203,13 +208,14 @@ assert.ok(flatSkipped.score < flatRun.score, "tasks the student skipped must cos
 // einschränken. Each must register from a sentence a learner would actually say, or the
 // briefing is decoration.
 const minimal = byId("minimalismus");
+// Also rewritten for the B2.1 phrases, for the same reason as the coaching block above.
 const boxLines = [
-  "Ich persönlich würde mich in so einer Wohnung wohlfühlen, weil ich dann Platz zum Denken habe.",
-  "Was mir auf jeden Fall fehlen würde, wäre meine Bücherwand.",
-  "Also, ich könnte auf meinen zweiten Drucker verzichten. Den brauche ich sowieso nicht.",
-  "Die Anzahl meiner T-Shirts könnte ich reduzieren und den Rest spenden.",
-  "Ich denke zwar auch, dass Dinge Geschichten erzählen, das heißt jedoch nicht, dass ich jeden Krempel behalten muss.",
-  "Es stimmt zwar, dass ein Auto praktisch ist, aber entscheidend ist für mich, dass ich es fast nie benutze.",
+  "Ich könnte mir gut vorstellen, mich dort anfangs fremd zu fühlen, langfristig aber zur Ruhe zu kommen.",
+  "Verzichten fällt mir dort leicht, wo ein Gerät austauschbar ist; schwieriger wird es, sobald ein persönlicher Wert im Spiel ist.",
+  "Dass Minimalismus befreit, will ich nicht bestreiten, allerdings sollte man den sozialen Druck dahinter nicht unterschätzen.",
+  "Letztlich kommt es weniger auf die Menge an als darauf, welche Bedeutung wir den Dingen beimessen.",
+  "Für die Korb-Methode spricht, dass sie langsam ist; dagegen ließe sich allerdings einwenden, dass sie vier Wochen dauert.",
+  "Ich neige zu der Karton-Methode, weil sie meinem Alltag am ehesten gerecht wird.",
 ];
 for (const line of boxLines) {
   const hits = targetsUsed(minimal, line);
@@ -219,7 +225,7 @@ for (const line of boxLines) {
   );
 }
 const minimalJudgement = {
-  goalCompletion: 3, taskResults: [2, 2, 2, 2], grammar: 4, vocab: 4, interaction: 4, corrections: [],
+  goalCompletion: 3, taskResults: [2, 2, 2, 2, 2], grammar: 4, vocab: 4, interaction: 4, corrections: [],
 };
 const spoken = computeScore({
   scenario: minimal,
@@ -246,44 +252,32 @@ const boxChallenges = [
   [
     "innereuhr",
     [
-      "Wie das Schaubild zeigt, bin ich am Morgen kaum leistungsfähig.",
-      "Mein größtes Hoch habe ich am späten Vormittag.",
-      "Ab 13 Uhr sinkt die Kurve, und das größte Tief kommt am frühen Nachmittag.",
-      "Überraschend war für mich vor allem, dass Licht die innere Uhr verschieben kann.",
-      "Mich hat überrascht, dass Schichtarbeit den Tagesrhythmus so stark stört.",
-      "Soviel ich weiß, hängt das mit unseren Genen zusammen.",
-      "Unbestritten ist auf jeden Fall, dass Tageslicht uns wach macht.",
-      "Ich könnte mir vorstellen, dass die dritte Meldung falsch ist, weil es keine solche Pille gibt.",
-      "Das kommt mir unglaubwürdig vor. Ich würde vermuten, dass die Brille erfunden ist.",
-      "Für viele ist es problematisch, wenn sie nachts arbeiten müssen.",
-      "Die Schichtarbeit macht vielen Menschen große Schwierigkeiten.",
-      "Bei meiner Erfindung handelt es sich um eine Lampe für den Nachtdienst.",
-      "Ein besonderes Merkmal ist, dass sie das blaue Licht herausfiltert.",
+      "Dem Schaubild zufolge erreicht meine Leistungskurve gegen elf Uhr ihren Höhepunkt, bevor sie am Nachmittag deutlich abfällt.",
+      "Was mich dabei am meisten erstaunt hat, ist der Umstand, dass Licht die innere Uhr verschieben kann.",
+      "Soweit ich informiert bin, geht die Forschung davon aus, dass die Gene nur die Hälfte bestimmen.",
+      "Im Gegensatz zu vielen anderen zähle ich eher zu den Langschläfern, was sich daran zeigt, dass ich abends fit bin.",
+      "Es liegt nahe, dass die Pille erfunden ist, denn andernfalls müsste man annehmen, dass niemand mehr Schlafmittel braucht.",
+      "Ein grundlegendes Problem der Schichtarbeit besteht darin, dass der Rhythmus ständig kippt; hier könnte eine Speziallampe Abhilfe schaffen.",
+      "Bei meiner Erfindung handelt es sich um eine Lampe für den Nachtdienst, deren besonderer Vorteil darin liegt, dass sie blaues Licht herausfiltert.",
     ],
     ["Ja, morgens geht es mir gut.", "Das wusste ich nicht.", "Vielleicht die zweite.", "Nachts arbeiten ist hart.", "Eine Lampe wäre gut.", "Ja, genau."],
   ],
   [
     "esstyp",
     [
-      "Bis zu einem gewissen Grad kann ich verstehen, dass du auf deine Nährstoffe achtest.",
-      "Ich habe Verständnis dafür, dass dir gutes Essen wichtig ist.",
-      "Aber das geht mir einfach zu weit.",
-      "Man kann es auch übertreiben, finde ich.",
-      "Wenn ich ehrlich bin, ist mir das ziemlich egal.",
-      "Wenn sie es glücklich macht, soll sie weiter wiegen!",
-      "Ein wichtiges Argument dafür ist, dass man seinen Körper besser kennt.",
-      "Ein weiteres Argument dagegen ist, dass zu viel Kontrolle stresst.",
-      "Zwar hat sie recht, wenn sie sagt, dass Ernährung wichtig ist.",
-      "Das ist allerdings nicht ganz richtig, denn Genuss gehört auch dazu.",
-      "Da stimme ich voll und ganz zu.",
-      "Ich bin komplett dagegen.",
+      "Ich kann durchaus nachvollziehen, dass dir deine Nährstoffe wichtig sind, gleichwohl frage ich mich, ob das nicht anstrengend wird.",
+      "Ehrlich gesagt lässt es mich eher kalt, ob mein Brot von Hand gebacken ist.",
+      "Für ein so kontrolliertes Essverhalten spricht zwar die Gesundheit, dem steht jedoch entgegen, dass es vierzig Minuten am Tag kostet.",
+      "So berechtigt dein Einwand ist, so wenig überzeugt er mich, denn Genuss gehört für mich dazu.",
+      "Man kann es mit der Selbstoptimierung auch übertreiben, findest du nicht?",
+      "Unterm Strich neige ich zu der Auffassung, dass ein bisschen Kontrolle völlig reicht.",
     ],
     ["Das Essen schmeckt gut.", "Du machst das schon richtig.", "Ich esse einfach, was da ist.", "Okay, verstehe.", "Ja, kann sein.", "Mal sehen."],
   ],
 ];
 
 const boxJudgement = {
-  goalCompletion: 3, taskResults: [2, 2, 2, 2, 2], grammar: 4, vocab: 4, interaction: 4, corrections: [],
+  goalCompletion: 3, taskResults: [2, 2, 2, 2, 2, 2], grammar: 4, vocab: 4, interaction: 4, corrections: [],
 };
 for (const [id, spokenLines, blandLines] of boxChallenges) {
   const sc = byId(id);
@@ -301,6 +295,59 @@ for (const [id, spokenLines, blandLines] of boxChallenges) {
   assert.equal(skippedBox.targetsUsed.length, 0, `${id}: bland talk hits none of the targets`);
 }
 
+// --- every challenge is now an information gap ---
+// The partner holds something the learner only gets by asking. Two shapes, on purpose:
+//
+//   Transactional (fahrkarte, restaurant, arzt): the questions ARE the challenge, so they
+//   also sit in `phrases` and the measured half of the vocabulary score rewards asking.
+//
+//   Kursbuch (coaching, minimalismus, innereuhr, esstyp): the Kommunikation boxes are the
+//   challenge. The questions are a task only, and deliberately NOT phrases -- adding them
+//   would let a learner hit the 5-target pool by asking five questions and never saying a
+//   single box, which is the forcing function those challenges exist for.
+const TRANSACTIONAL = ["fahrkarte", "restaurant", "arzt"];
+
+for (const sc of scenarios) {
+  assert.ok(sc.facts?.length, `${sc.id}: has a fact sheet`);
+  assert.equal(sc.askables?.length, 5, `${sc.id}: carries exactly five askable questions`);
+  for (const a of sc.askables) {
+    for (const key of ["de", "en", "answer"]) {
+      assert.ok(typeof a[key] === "string" && a[key].trim(), `${sc.id}: askable "${a.de}" needs a ${key}`);
+    }
+  }
+
+  const inPhrases = sc.askables.filter((a) => sc.phrases.some((f) => f.de === a.de)).length;
+  if (TRANSACTIONAL.includes(sc.id)) {
+    assert.equal(inPhrases, 5, `${sc.id} is transactional: every question must also be a scoring phrase`);
+  } else {
+    assert.equal(inPhrases, 0, `${sc.id} is a Kursbuch challenge: questions must not dilute the Kommunikation pool`);
+  }
+}
+
+// And on the three transactional ones, asking has to actually pay. Same goal, same grammar
+// and vocab ratings: the only difference is whether the learner asked or was simply told.
+const asking = { goalCompletion: 3, grammar: 4, vocab: 4, interaction: 4, corrections: [] };
+const askedVsTold = [];
+for (const id of TRANSACTIONAL) {
+  const sc = byId(id);
+  const full = sc.tasks.map(() => 2);
+  // Being told: the learner opens and closes the transaction but asks nothing in between.
+  const told = sc.tasks.map((_, i) => (i === 0 || i === sc.tasks.length - 1 ? 2 : 0));
+  const curious = computeScore({
+    scenario: sc,
+    messages: sc.askables.map((a) => ({ role: "user", content: a.de })),
+    judgement: { ...asking, taskResults: full },
+  });
+  const passive = computeScore({
+    scenario: sc,
+    messages: ["Guten Tag.", "Ja.", "Okay.", "Gut, danke.", "Auf Wiedersehen."].map((content) => ({ role: "user", content })),
+    judgement: { ...asking, taskResults: told },
+  });
+  assert.ok(curious.score > passive.score, `${id}: asking must beat being told (${curious.score} vs ${passive.score})`);
+  assert.equal(passive.targetsUsed.length, 0, `${id}: a passive transcript hits none of the questions`);
+  askedVsTold.push(`${id} ${curious.score}/${passive.score}`);
+}
+
 // The adversative connectors are Lektion 9's grammar, carried as target vocab so that
 // contrasting yourself with another sleep type is measured, not merely encouraged.
 const uhr = byId("innereuhr");
@@ -316,3 +363,4 @@ console.log("  half tasks:", halfTasks.score);
 console.log("  with target vocab:", withTargets.score, "| without:", withoutTargets.score);
 console.log("  sloppy:", sloppy.score, sloppy.breakdown);
 console.log("  one word:", empty.score);
+console.log("  asked vs told:", askedVsTold.join(" | "));
