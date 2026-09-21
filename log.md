@@ -985,3 +985,99 @@ existing `level-B` styling, and the home-screen level filter is built from
 Left open: the four scenarios' `vocab` lists were left as-is. They are already
 appropriate, and swapping words would not raise the level the way the phrases do. Revisit
 if the scenarios feel too easy in practice.
+
+## 21.09.2026 - Fahrkarte: spoken transcripts and the information gap
+
+Two changes, both scoped to the `fahrkarte` challenge except where the problem is
+pipeline-wide and could not honestly be.
+
+### 1. A voice transcript is no longer marked down for what a speaker cannot say
+
+The conversation is voice: `app/page.js:1017` uses the browser's `SpeechRecognition` with
+`interimResults = false`, so what reaches the examiner is whatever the recognizer typed.
+Capitalization, punctuation and the spelling of homophones are therefore **its** guesses,
+never the learner's. German makes this the single most common false correction: every noun
+is capitalized in writing, so a recognizer that types "die fahrkarte" hands the examiner a
+mistake nobody could make out loud. The learner then loses grammar points for it, twice
+over — once in the corrections list, once in the 0-5 grammar rating that is worth 20.
+
+New `app/spoken.js`, two layers, because one is not enough:
+
+- `SPOKEN_TRANSCRIPT_NOTE` is appended to the examiner prompt by `evalSystem`. It names
+  the pipeline and forbids orthography both as a correction and as a reason to lower the
+  grammar rating.
+- `dropSpokenArtifacts()` runs in `/api/feedback` on what came back anyway, dropping every
+  correction whose `wrong` and `right` are identical once case, punctuation, hyphens,
+  spacing, umlaut spelling and ß/ss are gone.
+
+The filter is not belt-and-braces: gpt-5-nano is the model, a prompt is a request, and the
+whole point is that this never reaches the learner. The prompt alone was rejected for that
+reason. Equally, the filter alone was rejected: it can only delete a correction, it cannot
+undo the grammar rating the model already lowered because of one.
+
+**Deliberately pipeline-wide, not per-challenge.** This was the one place the "Fahrkarte
+only" scope was not kept, and the reason is that the rule is a property of speech-to-text,
+not of a scenario. A per-scenario flag would mean the same inaudible "mistake" is forgiven
+in `fahrkarte` and punished in `coaching`, which is not a defensible thing to ship. It only
+ever removes false penalties, so no challenge gets harder.
+
+`app/spoken.selftest.mjs` asserts both directions: lower-case nouns, missing question
+marks, ue/ü, ss/ß and split compounds are dropped; wrong article (`ein`/`eine`), wrong
+gender (`der`/`die`), word order and verb form survive.
+
+### 2. The clerk holds the timetable, and the learner has to ask for it
+
+`fahrkarte` was a challenge you could pass without asking anything: the model volunteered
+the whole timetable in its first reply, and invented a price that changed two turns later,
+which teaches that asking is pointless.
+
+Two optional, guarded scenario fields, appended by `chatSystem` and carried by `fahrkarte`
+alone (verified: no other scenario defines either):
+
+- `facts` — the clerk's fixed knowledge, pinned to the digit. Two connections, 8:02 direct
+  (Gleis 7, 2h20, 49/89 €) and 9:14 with one change in Mannheim (Gleis 12, 3h, 39/69 €).
+  The numbers are the same whatever city the learner names, on purpose: the goal lets them
+  pick any destination, and a real timetable for every German city is not something to
+  hardcode. What has to be stable is that the answer does not move mid-conversation.
+- `askables` — the five questions with the answer waiting behind each. Model-facing only;
+  the learner sees the question side in `phrases` and never the answers.
+
+**The five questions**, chosen as what an A2 learner actually needs at a counter and what
+the clerk alone can know: departure time, price, changing trains, platform, journey time.
+
+Made to cost something rather than merely suggested:
+
+- All five are in `phrases`, so the measured half of the vocabulary score matches them
+  against the transcript. Two were missing and were added (`Von welchem Gleis …`,
+  `Wie lange dauert die Fahrt?`), plus `das Gleis`, `die Verbindung`, `die Fahrzeit` in
+  `vocab`.
+- `tasks` went from 3 to 5, three of them questions. The old bundled "Frag nach Uhrzeit und
+  Preis", graded 0-2, could not tell apart a learner who asked both from one who asked
+  neither and was simply told.
+- The `system` prompt makes the clerk withhold: it offers the two departures with the bare
+  time only, answers just the question asked, and asks "Möchten Sie noch etwas wissen?"
+  once if the learner tries to buy having asked nothing.
+
+**Measured, not assumed** (`node app/scoring.selftest.mjs`, new Fahrkarte block): each of
+the five questions registers from a sentence somebody would really say ("Von welchem Gleis
+fährt er ab?", not the template verbatim), and asking scores **91 against 71** for the same
+goal, grammar and vocab ratings with no questions asked.
+
+### Also
+
+`How To/HowTo-challenge.md` updated: `facts`/`askables` in the object sketch and the
+prompt-field list, a new "Information gap" section with the six-step recipe, and the
+spoken-transcript rule under Evaluation. Two stale claims fixed while there — it said the
+model returns `score` (it does not; `computeScore` derives it server-side) and that
+`saveSession()` POSTs to `/api/sessions` (that route is `GET`-only; `/api/feedback` writes
+the row itself).
+
+### Open, and not mine to close
+
+`node app/scoring.selftest.mjs` **fails** at the coaching assertion on line ~147,
+"the einerseits/andererseits phrase must register from a natural sentence". This is
+pre-existing and was confirmed by stashing this work and re-running: `41260d8` rewrote
+coaching's phrases into B2.1 register and removed the einerseits/andererseits phrase, but
+left the assertion that requires it. Left alone because fixing it means deciding what
+coaching's phrase contract should now be, which is content work on another challenge.
+Every Fahrkarte assertion runs before it and passes.

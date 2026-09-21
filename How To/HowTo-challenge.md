@@ -33,11 +33,16 @@ One object powers the whole flow:
   placeEn: "You are at the ticket counter …",   // English version (toggle)
   goal: "Kaufe eine Zugfahrkarte …",            // the mission (German)
   goalEn: "Buy a train ticket …",               // English version (blurred until "Show English")
-  tasks:   ["Sag, wohin du willst", …],         // 2-4 sub-steps (German)
+  tasks:   ["Sag, wohin du willst", …],         // 2-5 sub-steps (German)
   tasksEn: ["Say where you want to go", …],     // English, SAME length/order as tasks
 
   vocab:   [{ de: "die Fahrkarte", en: "the ticket" }, …],   // starrable word list
   phrases: [{ de: "Ich möchte …",   en: "I would like …" }, …], // starrable phrase list
+
+  // Optional, only for challenges built on an information gap (see that section below).
+  // Both are model-facing: the learner never sees them.
+  facts:    ["8:02 Uhr: direkt, Gleis 7, 49 Euro einfach …", …],   // what the character knows
+  askables: [{ de: "Was kostet das?", en: "How much is it?", answer: "Nenne den Preis …" }, …],
 
   system: `Du bist ein Schalterbeamter …`,      // the character's role prompt (German)
 }
@@ -90,6 +95,8 @@ The character is defined by `scenario.system` (role, place, tone). On top of tha
 - `tasks` → "Aufgaben: …" the sub-steps, joined by `;`.
 - `vocab` → "Zielvokabular (bevorzugt einsetzen): …" the German words to work in.
 - `phrases` → "Nützliche Sätze: …" the German phrases, joined by `|`.
+- `facts` → "Feste Angaben …" the character's fixed knowledge, one bullet per entry.
+- `askables` → "Diese Fragen soll der Nutzer stellen …" each question with its prepared answer.
 
 Each line is guarded, so a scenario missing a field just skips it. English translations (`vocab.en`, `phrases.en`) are intentionally not sent: the model speaks German only. So `scenario.system` still handles role/place/tone (stay in character, German only, short sentences, help when stuck), and the structured fields handle the mission and vocab. Copy an existing `system` and swap the role/place/ending; the rest flows from the fields you already fill in.
 
@@ -110,15 +117,46 @@ Triggered by **Gespräch beenden** → `endConversation()`. This does three thin
 
 | Field | Meaning |
 |-------|---------|
-| `score` | 0-100 overall (fluency + grammar + vocab + whether the `goal` was met). This is the number shown. |
+| `goalCompletion` | How far the student got: 0 not attempted … 3 fully achieved. |
+| `taskResults` | One 0-2 per briefing task, in the order `tasks` lists them. |
+| `grammar`, `vocab`, `interaction` | 0-5 sub-ratings, judged against the scenario's own `level`. |
 | `summary` | One-sentence recap (English). |
 | `strengths` | 1-3 things done well (English). |
 | `corrections` | Up to 5 mistakes: `wrong` → `right`, a `note`, and a `tag` from a fixed category list. |
 | `tip` | One practical tip (English). |
-| `grammar`, `vocab` | 0-5 sub-ratings. Still returned and stored, but no longer shown in the UI. |
 
-**Saving (`saveFeedback`)**
-`saveSession()` POSTs the transcript and the evaluation to `/api/sessions`, which stores a row in D1 and returns the Top 10 for the leaderboard screen that follows the conversation.
+The model does **not** return the score. It reports the observations above, and
+`computeScore` in `app/scoring.js` turns them into 0-100 on the server, so a client cannot
+send one in. `WEIGHTS` there is the whole formula; `/admin` → Methodology prints it.
+
+**Spoken transcripts: what is never a mistake**
+
+The conversation is voice. `app/page.js` records one utterance with the browser's
+`SpeechRecognition` and sends whatever text comes back, so **capitalization, punctuation
+and the spelling of words that sound alike are the recognizer's guesses, not the
+learner's.** German makes this sharp: every noun is capitalized in writing, so a
+recognizer that types "die fahrkarte" hands the examiner a mistake the speaker could not
+have made. It was the most common false correction.
+
+`app/spoken.js` closes it on two levels, and both are needed:
+
+1. `SPOKEN_TRANSCRIPT_NOTE`, appended to the examiner prompt by `evalSystem`, tells the
+   model not to look at orthography at all — not as a correction, not as a reason to lower
+   the grammar rating.
+2. `dropSpokenArtifacts()` runs in `/api/feedback` on whatever came back anyway, and
+   removes every correction whose `wrong` and `right` are identical once case,
+   punctuation, hyphens, spacing, umlaut spelling and ß/ss are stripped. A prompt is a
+   request; a filter is a guarantee.
+
+What survives is what would still be wrong read aloud: word order, case endings, verb
+forms, the article a noun takes, word choice. `node app/spoken.selftest.mjs` asserts both
+directions. This is pipeline-wide, not per-challenge — every challenge is voice.
+
+**Saving**
+`/api/feedback` writes the `sessions` row itself, in the same request that produced the
+evaluation, and returns the leaderboard and streak with it. That is deliberate: the only
+way into the leaderboard is a conversation the model actually scored. `/api/sessions` is
+read-only (`GET`), for the history list and for reopening one past conversation.
 
 **The feedback screen (`Evaluation` component)**
 - `score-card`: the big `score/100`, colored by band (`good` ≥80, `ok` ≥60, else `low`), plus the `summary`.
@@ -134,6 +172,49 @@ Triggered by **Gespräch beenden** → `endConversation()`. This does three thin
 The leaderboard is **per-scenario and personal** (your own attempts, ranked). A cross-user leaderboard would need a backend.
 
 ---
+
+## Information gap: making the learner ask
+
+Some challenges are not about answering well, they are about **asking at all**. Buying a
+ticket is the clearest case: the learner knows only where they want to go. When the train
+leaves, what it costs, how long it takes, which platform, whether they change — the clerk
+knows all of it, and the learner only gets it by asking.
+
+Left alone the model ruins this twice over. It volunteers the whole timetable in its first
+reply, so there is nothing left to ask; and it invents a price, then a different price two
+turns later, which teaches the learner that asking was pointless. Two optional fields fix
+each half:
+
+| Field | What it does |
+|-------|--------------|
+| `facts` | The character's fixed knowledge, as German bullets. Pinned to the digit, because a clerk who quotes 49 euro and then 52 is worse than one who quotes nothing. |
+| `askables` | `{ de, en, answer }` per expected question. `de`/`en` are the question, `answer` is the reply waiting behind it. Model-facing: the learner sees the question side in `phrases`, never the answers. |
+
+Both are appended by `chatSystem`, both are guarded, so a challenge without them is
+completely unaffected.
+
+Building one:
+
+1. **List the questions first.** Five is a good number for A2 — more than that and no
+   single conversation covers them. For `fahrkarte`: departure time, price, changing
+   trains, platform, journey time.
+2. **Put every question into `phrases` too.** That is what makes asking worth points: the
+   measured half of the vocabulary score matches `phrases` against the transcript, so a
+   learner who says "Ich nehme die" and nothing else scores below one who asked.
+3. **Give each question its own `tasks` entry.** The examiner grades every task 0-2, so a
+   question never asked costs points on top. `fahrkarte` has five tasks, three of them
+   questions, precisely because one bundled "ask about time and price" could not tell
+   apart a learner who asked both from one who asked neither.
+4. **Write `facts` so they answer every question for any input.** `fahrkarte`'s two
+   connections are deliberately the same whatever city the learner names: the goal lets
+   them pick any destination, and a real timetable for every German city is not something
+   to hardcode. What has to be stable is that the answer does not move.
+5. **Make the character withhold, in its `system` prompt.** Offer a choice with the bare
+   minimum ("a train at 8:02 and one at 9:14 — which one?"), answer only the question
+   actually asked, and nudge once if the learner tries to buy without asking anything.
+6. **Assert the gap.** `app/scoring.selftest.mjs` checks that each of the five questions
+   registers from a sentence somebody would really say, and that asking outscores being
+   told. Measured, not assumed: 91 against 71.
 
 ## Where the content comes from
 
@@ -162,5 +243,7 @@ prompt; the lesson's reading text belongs in a text (see `HowTo-text.md`), not h
 2. Fill the menu/header fields: `category`, `level`, `photo`, `title`, `desc`. Optionally `featured` / `locked` / `lektion`.
 3. Write the briefing: `place`/`placeEn`, `goal`/`goalEn`, `tasks`/`tasksEn` (keep each `…En` array the same length and order as its German twin).
 4. Add `vocab` and `phrases` (each `{ de, en }`). Both optional; empty just hides the panel. Note these also feed the chat model as target language (the `de` side), not just the intro panels.
+4b. If the challenge turns on the learner *asking* for something only the character knows, add `facts` and `askables` and read "Information gap" above. Skip both otherwise.
 5. Write the `system` prompt: role, place, "stay in character, German only, short sentences, help when stuck." Keep it about persona and tone; the mission and vocab (`level`, `goal`, `tasks`, `vocab`, `phrases`) are appended automatically by `buildSystem`, so you no longer need to restate them in prose.
 6. That's it. No API, component, or CSS changes: chat reads `system` + the structured fields, feedback reads `title`, and the leaderboard keys off `scenario_id`. Test with a real run.
+7. Add the challenge to `app/scoring.selftest.mjs` and run `node app/scoring.selftest.mjs`: every phrase the challenge is built around should register from a sentence a learner would really say, not only from the template recited verbatim.

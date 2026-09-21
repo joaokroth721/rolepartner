@@ -5,6 +5,7 @@ import { getDb, resolveUser, json, fail, oops, readBoard, currentStreak } from "
 import { wrongOrigin, knownScenario, badTranscript, overQuota } from "../../guard";
 import { EVAL_SCHEMA, evalSystem, evalPrompt } from "../../prompts";
 import { MODEL, recordUsage } from "../../ai";
+import { dropSpokenArtifacts } from "../../spoken";
 
 // What the model is asked for: observations, not a score. The score is computed from
 // these in app/scoring.js, on the server, so it cannot be sent in by a client. The schema
@@ -37,8 +38,11 @@ export async function POST(req) {
     });
     await recordUsage(db, { userId: user.id, route: "feedback", usage });
 
+    // Orthography the speaker never chose is dropped before anything else looks at the
+    // list: the transcript is what a speech recognizer typed, so capitalization and
+    // punctuation are its guesses. See app/spoken.js.
     // Show the mistakes that impede meaning first.
-    object.corrections = (object.corrections || []).sort(
+    object.corrections = dropSpokenArtifacts(object.corrections).sort(
       (a, b) => (a.severity === "major" ? 0 : 1) - (b.severity === "major" ? 0 : 1)
     );
 

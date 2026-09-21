@@ -17,10 +17,26 @@ export const scenarios = [
     desc: "Kauf am Bahnhofsschalter eine Zugfahrkarte.",
     place: "Du stehst am Fahrkartenschalter eines Bahnhofs in Deutschland.",
     placeEn: "You are at the ticket counter of a train station in Germany.",
-    goal: "Kaufe eine Zugfahrkarte in eine Stadt deiner Wahl.",
-    goalEn: "Buy a train ticket to a city of your choice.",
-    tasks: ["Sag, wohin du willst", "Frag nach Uhrzeit und Preis", "Schließe den Kauf ab"],
-    tasksEn: ["Say where you want to go", "Ask about time and price", "Complete the purchase"],
+    goal: "Kaufe eine Zugfahrkarte in eine Stadt deiner Wahl. Frag nach allem, was du noch nicht weißt.",
+    goalEn: "Buy a train ticket to a city of your choice. Ask for everything you do not know yet.",
+    // Five tasks, three of them questions. The point of this challenge is the information
+    // gap: the learner knows only the destination, the clerk knows everything else. The
+    // old single "Frag nach Uhrzeit und Preis" task, graded 0-2, could not tell apart a
+    // learner who asked both from one who asked neither and was simply told.
+    tasks: [
+      "Sag, wohin du willst, und ob du einfach oder hin und zurück fährst",
+      "Frag nach der Abfahrtszeit und wähle eine der beiden Verbindungen",
+      "Frag nach dem Preis",
+      "Frag nach mindestens einer weiteren Information: Gleis, Fahrdauer oder Umsteigen",
+      "Schließe den Kauf ab",
+    ],
+    tasksEn: [
+      "Say where you want to go, and whether it is one-way or round trip",
+      "Ask when the train leaves and choose one of the two connections",
+      "Ask what it costs",
+      "Ask for at least one more detail: platform, journey time, or changing trains",
+      "Complete the purchase",
+    ],
     vocab: [
       { de: "die Fahrkarte", en: "the ticket" },
       { de: "der Bahnsteig", en: "the platform" },
@@ -30,19 +46,89 @@ export const scenarios = [
       { de: "hin und zurück", en: "round trip" },
       { de: "der Zuschlag", en: "the surcharge" },
       { de: "umsteigen", en: "to change trains" },
+      { de: "das Gleis", en: "the track, platform" },
+      { de: "die Verbindung", en: "the connection" },
+      { de: "die Fahrzeit", en: "the journey time" },
     ],
+    // The five questions below are the ones the learner has to ask, so they are also the
+    // phrases the measured half of the vocabulary score matches against the transcript:
+    // asking earns points, and "Ich nehme die" without a single question does not.
     phrases: [
       { de: "Ich möchte eine Fahrkarte nach …", en: "I would like a ticket to …" },
       { de: "Einfach oder hin und zurück?", en: "One-way or round trip?" },
       { de: "Wann fährt der nächste Zug?", en: "When does the next train leave?" },
       { de: "Was kostet das?", en: "How much is it?" },
       { de: "Muss ich umsteigen?", en: "Do I have to change trains?" },
+      { de: "Von welchem Gleis fährt der Zug ab?", en: "Which platform does the train leave from?" },
+      { de: "Wie lange dauert die Fahrt?", en: "How long does the journey take?" },
     ],
+
+    // The clerk's timetable, and the reason this challenge works at all.
+    //
+    // Without it the model invents a price, and invents a different one two turns later,
+    // which quietly teaches the learner that asking was pointless. The numbers are
+    // deliberately independent of the destination: the goal lets the learner pick any
+    // city, and a real timetable for every German city is not something to hardcode --
+    // what has to be stable is that the answer does not move, not that Bonn is 2h20 away.
+    facts: [
+      "Es gibt genau zwei Verbindungen, egal welches Ziel der Nutzer nennt: um 8:02 Uhr und um 9:14 Uhr.",
+      "8:02 Uhr: direkt, ohne Umsteigen, Gleis 7, Fahrzeit 2 Stunden 20 Minuten, 49 Euro einfach, 89 Euro hin und zurück.",
+      "9:14 Uhr: einmal umsteigen in Mannheim, Gleis 12, Fahrzeit 3 Stunden, 39 Euro einfach, 69 Euro hin und zurück.",
+      "Der frühere Zug ist also schneller und teurer, der spätere langsamer und billiger.",
+      "Bezahlen geht bar und mit Karte. Eine Sitzplatzreservierung kostet 5 Euro extra.",
+    ],
+
+    // What the learner is expected to ask, and the answer waiting behind each question.
+    // Model-facing only: the learner sees the question side in `phrases`, never the
+    // answers, because being told the price before asking is the one thing this challenge
+    // is built to prevent.
+    askables: [
+      {
+        de: "Wann fährt der nächste Zug?",
+        en: "When does the next train leave?",
+        answer: "Um 8:02 Uhr fährt ein direkter Zug, um 9:14 Uhr einer mit Umsteigen.",
+      },
+      {
+        de: "Was kostet das?",
+        en: "How much is it?",
+        answer: "Nenne den Preis der gewählten Verbindung, einfach oder hin und zurück, je nachdem was der Nutzer wollte.",
+      },
+      {
+        de: "Muss ich umsteigen?",
+        en: "Do I have to change trains?",
+        answer: "Beim Zug um 8:02 Uhr nicht, der fährt direkt. Beim Zug um 9:14 Uhr einmal, in Mannheim.",
+      },
+      {
+        de: "Von welchem Gleis fährt der Zug ab?",
+        en: "Which platform does the train leave from?",
+        answer: "Der Zug um 8:02 Uhr von Gleis 7, der um 9:14 Uhr von Gleis 12.",
+      },
+      {
+        de: "Wie lange dauert die Fahrt?",
+        en: "How long does the journey take?",
+        answer: "Direkt 2 Stunden 20 Minuten, mit Umsteigen etwa 3 Stunden.",
+      },
+    ],
+
     system: `Du bist ein Schalterbeamter am Bahnhof in Deutschland.
 Der Nutzer übt Deutsch und will eine Zugfahrkarte kaufen.
 Bleib immer in der Rolle. Sprich nur Deutsch, in kurzen, natürlichen Sätzen (max. 2 Sätze).
 Passe dein Niveau leicht an den Nutzer an, aber vereinfache nicht zu sehr.
-Wenn der Nutzer stockt, hilf freundlich weiter. Führe das Gespräch bis zum Kauf.`,
+
+Wichtig: Du hast die Informationen, der Nutzer hat sie nicht.
+Er weiß nur, wohin er will. Wann der Zug fährt, was er kostet, wie lange er braucht,
+von welchem Gleis er abfährt und ob er umsteigen muss, weißt nur du.
+Er soll danach fragen. Verrate deshalb nie alles auf einmal.
+
+So führst du das Gespräch:
+- Frag zuerst nach dem Ziel, dann "Einfach oder hin und zurück?".
+- Nenne dann von dir aus die zwei Verbindungen, aber nur mit der Uhrzeit, und lass ihn wählen.
+- Preis, Fahrzeit, Gleis und Umsteigen nennst du erst, wenn er danach fragt. Beantworte
+  immer nur die Frage, die er gestellt hat, nicht die anderen gleich mit.
+- Will er kaufen, ohne nach dem Preis gefragt zu haben, frag einmal zurück:
+  "Möchten Sie noch etwas wissen?" Besteht er auf dem Kauf, verkauf ihm die Fahrkarte.
+- Weiß er nicht weiter, schlag ihm eine Frage vor ("Sie können mich zum Beispiel nach dem Gleis fragen.").
+Führe das Gespräch bis zum Kauf und bestätige ihn am Ende kurz.`,
   },
   {
     id: "coaching",

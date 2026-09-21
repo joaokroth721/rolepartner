@@ -27,7 +27,7 @@ const perfectTurns = [
   { role: "user", content: "Was kostet das?" },
   { role: "user", content: "Gut, ich nehme sie. Von welchem Bahnsteig?" },
 ];
-const perfectJudgement = { goalCompletion: 3, taskResults: [2, 2, 2], grammar: 5, vocab: 5, interaction: 5, corrections: [] };
+const perfectJudgement = { goalCompletion: 3, taskResults: [2, 2, 2, 2, 2], grammar: 5, vocab: 5, interaction: 5, corrections: [] };
 const best = computeScore({ scenario, messages: perfectTurns, judgement: perfectJudgement });
 assert.equal(best.score, 100, `a flawless run that uses the briefing is 100, got ${best.score}`);
 
@@ -47,14 +47,14 @@ assert.ok(nearGoal.score < best.score, "a near-miss scores below full goal compl
 assert.equal(noGoal.score, 100 - WEIGHTS.goal, "missing the goal entirely costs exactly its weight");
 
 // --- partial tasks earn partial credit ---
-const halfTasks = computeScore({ scenario, messages: perfectTurns, judgement: { ...perfectJudgement, taskResults: [2, 1, 0] } });
+const halfTasks = computeScore({ scenario, messages: perfectTurns, judgement: { ...perfectJudgement, taskResults: [2, 1, 1, 0, 0] } });
 assert.ok(halfTasks.score < best.score && halfTasks.score > noGoal.score, "partial tasks land between full and no goal");
 
 // --- one word, nothing achieved ---
 const empty = computeScore({
   scenario,
   messages: [{ role: "user", content: "Hallo" }],
-  judgement: { goalCompletion: 0, taskResults: [0, 0, 0], grammar: 0, vocab: 0, interaction: 0, corrections: [] },
+  judgement: { goalCompletion: 0, taskResults: [0, 0, 0, 0, 0], grammar: 0, vocab: 0, interaction: 0, corrections: [] },
 });
 assert.ok(empty.score <= 2, `a one-word attempt scores near zero, got ${empty.score}`);
 
@@ -78,7 +78,7 @@ const withTargets = computeScore({
     { role: "user", content: "Hin und zurück. Was kostet das? Muss ich umsteigen?" },
     { role: "user", content: "Wann fährt der nächste Zug vom Bahnsteig?" },
   ],
-  judgement: { goalCompletion: 3, taskResults: [2, 2, 0], grammar: 4, vocab: 4, interaction: 4, corrections: [] },
+  judgement: { goalCompletion: 3, taskResults: [2, 2, 2, 0, 0], grammar: 4, vocab: 4, interaction: 4, corrections: [] },
 });
 const withoutTargets = computeScore({
   scenario,
@@ -87,7 +87,7 @@ const withoutTargets = computeScore({
     { role: "user", content: "Ja gut, und der Preis?" },
     { role: "user", content: "Alles klar, danke." },
   ],
-  judgement: { goalCompletion: 3, taskResults: [2, 2, 0], grammar: 4, vocab: 4, interaction: 4, corrections: [] },
+  judgement: { goalCompletion: 3, taskResults: [2, 2, 2, 0, 0], grammar: 4, vocab: 4, interaction: 4, corrections: [] },
 });
 assert.ok(
   withTargets.score > withoutTargets.score,
@@ -99,7 +99,7 @@ const sloppy = computeScore({
   scenario,
   messages: perfectTurns,
   judgement: {
-    goalCompletion: 3, taskResults: [2, 2, 2], grammar: 2, vocab: 3, interaction: 4,
+    goalCompletion: 3, taskResults: [2, 2, 2, 2, 2], grammar: 2, vocab: 3, interaction: 4,
     corrections: [1, 2, 3, 4, 5].map((i) => ({ wrong: `w${i}`, right: `r${i}`, severity: "minor" })),
   },
 });
@@ -113,6 +113,46 @@ for (const r of [best, ignoredBriefing, nearGoal, noGoal, halfTasks, empty, with
   assert.equal(Math.max(0, Math.min(100, sum)), r.score, "breakdown explains the score");
   assert.ok(r.score >= 0 && r.score <= 100, "score stays in 0-100");
 }
+
+// --- Fahrkarte: the five questions are the challenge ---
+// This one is an information gap: the clerk holds the timetable and the learner only
+// gets it by asking. That is only real if asking moves the number, so every question is
+// asserted from a sentence somebody would actually say, not from the template recited.
+const asked = [
+  "Wann fährt der nächste Zug nach Bonn?",
+  "Und was kostet das dann?",
+  "Muss ich in Mannheim umsteigen?",
+  "Von welchem Gleis fährt er ab?",
+  "Wie lange dauert die Fahrt ungefähr?",
+];
+for (const line of asked) {
+  const hits = targetsUsed(scenario, line);
+  assert.ok(
+    hits.some((h) => scenario.phrases.some((f) => f.de === h)),
+    `an askable question must match from a natural sentence: ${line}`
+  );
+}
+
+// A learner who asks nothing and lets the clerk volunteer everything must score below one
+// who asks. Same goal reached, same grammar: the difference is only the asking.
+const curiousJudgement = {
+  goalCompletion: 3, taskResults: [2, 2, 2, 2, 2], grammar: 4, vocab: 4, interaction: 4, corrections: [],
+};
+const silentJudgement = {
+  goalCompletion: 3, taskResults: [2, 0, 0, 0, 2], grammar: 4, vocab: 4, interaction: 4, corrections: [],
+};
+const curious = computeScore({
+  scenario,
+  messages: asked.map((content) => ({ role: "user", content })),
+  judgement: curiousJudgement,
+});
+const silent = computeScore({
+  scenario,
+  messages: ["Ich will nach Bonn.", "Ja.", "Okay.", "Gut.", "Ich nehme die."].map((content) => ({ role: "user", content })),
+  judgement: silentJudgement,
+});
+assert.ok(curious.score > silent.score, `asking must beat being told (${curious.score} vs ${silent.score})`);
+assert.equal(silent.targetsUsed.length, 0, "a learner who asks nothing hits none of the question phrases");
 
 // --- the coaching challenge: its phrases are the challenge ---
 // "Erfolgreich scheitern" exists to make the student qualify an argument rather than

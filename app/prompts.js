@@ -5,6 +5,7 @@
 // from the same scenario fields would look right and still drift the day a route changes
 // a line. Now there is one string builder, and both the caller and the report use it.
 import { TAGS } from "./tags";
+import { SPOKEN_TRANSCRIPT_NOTE } from "./spoken";
 
 /** The in-character system prompt for /api/chat: the scenario's own voice, plus the briefing. */
 export function chatSystem(s) {
@@ -14,6 +15,20 @@ export function chatSystem(s) {
   if (s.tasks?.length) lines.push(`Aufgaben: ${s.tasks.join("; ")}`);
   if (s.vocab?.length) lines.push(`Zielvokabular (bevorzugt einsetzen): ${s.vocab.map((v) => v.de).join(", ")}`);
   if (s.phrases?.length) lines.push(`Nützliche Sätze: ${s.phrases.map((p) => p.de).join(" | ")}`);
+  // What the character knows and the learner does not. Only the scenarios built around an
+  // information gap carry these, so every other challenge skips both lines untouched.
+  // `facts` is pinned down to the digit because a clerk who quotes 49 euro and then 52 is
+  // teaching the learner that asking was pointless.
+  if (s.facts?.length) {
+    lines.push(`Feste Angaben. Halte dich immer daran und ändere keine Zahl im Gespräch:\n- ${s.facts.join("\n- ")}`);
+  }
+  if (s.askables?.length) {
+    lines.push(
+      `Diese Fragen soll der Nutzer stellen. Antworte erst, wenn er fragt, und dann genau so:\n${s.askables
+        .map((a) => `- "${a.de}" -> ${a.answer}`)
+        .join("\n")}`
+    );
+  }
   return lines.join("\n");
 }
 
@@ -28,7 +43,9 @@ Write ALL feedback in English, be specific and encouraging. For each mistake, gi
 The student's goal was: "${scenario.goal}".
 Their tasks were, in this order: ${(scenario.tasks || []).map((t, i) => `${i + 1}. ${t}`).join(" ")}
 Report "goalCompletion" (0 not attempted, 1 attempted, 2 mostly done, 3 fully achieved) and one "taskResults" entry per task, in that order (0 skipped, 1 partial, 2 done). Judge only what the transcript shows.
-Rate grammar (0-5), vocabulary (0-5), and interaction (0-5) against the ${level} level. Do not rate an overall score: that is computed separately.`;
+Rate grammar (0-5), vocabulary (0-5), and interaction (0-5) against the ${level} level. Do not rate an overall score: that is computed separately.
+
+${SPOKEN_TRANSCRIPT_NOTE}`;
 }
 
 /** How the transcript is laid out under the examiner prompt. */
