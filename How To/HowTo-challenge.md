@@ -193,6 +193,21 @@ each half:
 Both are appended by `chatSystem`, both are guarded, so a challenge without them is
 completely unaffected.
 
+**Every challenge now carries them**, but in one of two shapes, and the difference is the
+thing to get right when you add a new one:
+
+| Shape | Challenges | The questions go in `phrases`? |
+|-------|-----------|-------------------------------|
+| **Transactional** — the asking *is* the challenge | `fahrkarte`, `restaurant`, `arzt` | **Yes.** They are measured, so asking earns points. |
+| **Kursbuch** — the Kommunikation boxes are the challenge | `coaching`, `minimalismus`, `innereuhr`, `esstyp` | **No.** One extra task only. |
+
+Why the split: the measured half of the vocabulary score rewards the first five targets it
+finds. On a Kursbuch challenge, adding five questions to `phrases` would let a learner fill
+that pool by asking five questions and never say a single Kommunikation phrase — which is
+the exact forcing function those challenges exist for. So there the question becomes one
+`tasks` entry (graded 0-2 by the examiner) and nothing else. `app/scoring.selftest.mjs`
+asserts both halves of this rule, so a future challenge cannot get it wrong quietly.
+
 Building one:
 
 1. **List the questions first.** Five is a good number for A2 — more than that and no
@@ -214,7 +229,13 @@ Building one:
    actually asked, and nudge once if the learner tries to buy without asking anything.
 6. **Assert the gap.** `app/scoring.selftest.mjs` checks that each of the five questions
    registers from a sentence somebody would really say, and that asking outscores being
-   told. Measured, not assumed: 91 against 71.
+   told. Measured, not assumed: 91 against 71 on all three transactional challenges.
+
+A trap worth naming: when the partner already *had* the information and simply narrated it,
+moving it into `facts` is only half the job. The `system` prompt has to be changed too, or
+the model keeps volunteering it. `minimalismus` is the clearest case — Sabrina used to be
+told "Stell am Ende die drei Methoden vor", which made the "weigh two methods" task a test
+of repeating what she had just said. She now names them and explains one only when asked.
 
 ## Where the content comes from
 

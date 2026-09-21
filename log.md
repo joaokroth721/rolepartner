@@ -1081,3 +1081,74 @@ coaching's phrases into B2.1 register and removed the einerseits/andererseits ph
 left the assertion that requires it. Left alone because fixing it means deciding what
 coaching's phrase contract should now be, which is content work on another challenge.
 Every Fahrkarte assertion runs before it and passes.
+
+## 21.09.2026 - The information gap, applied to every challenge
+
+`fdee16a` gave `fahrkarte` a partner who holds the timetable and a learner who has to ask
+for it. The same treatment now covers the other six. The spoken-transcript half of that
+commit needed nothing: it was pipeline-wide from the start.
+
+### Two shapes, not one
+
+Copying `fahrkarte` everywhere would have broken the four Kursbuch challenges, so the
+pattern is applied in two forms:
+
+**Transactional** (`fahrkarte`, `restaurant`, `arzt`) — the asking *is* the challenge. The
+five questions go into `phrases` as well, so the measured half of the vocabulary score pays
+for asking, and `tasks` grows to make each ask separately gradeable.
+
+**Kursbuch** (`coaching`, `minimalismus`, `innereuhr`, `esstyp`) — the Kommunikation boxes
+are the challenge. Here the questions are **one added task and nothing else**. They are
+deliberately kept out of `phrases`: the measured pool is the first five targets found, so
+five question phrases would let a learner fill it by asking and never say a single box.
+That is precisely the forcing function those four exist for. `app/scoring.selftest.mjs`
+now asserts both halves of the rule (`TRANSACTIONAL` list), so a future challenge cannot
+get it wrong quietly.
+
+### What each partner now withholds
+
+- **coaching** — Milo's programme: 50-minute free first session, six sessions over three
+  months at 90 euro, the three-step method, ~70 percent return after a second setback, and
+  no guarantee or certificate. He mentions a method exists and waits.
+- **minimalismus** — the three decluttering methods. This one was the clearest bug: the
+  system prompt said "Stell am Ende die drei Methoden vor", so task 4 ("weigh two methods")
+  tested repeating what Sabrina had just said. She now names them and explains one only on
+  request, and holds back that her own declutter took four years, not four weeks.
+- **innereuhr** — the Möllenkamp study (two years, 1,200 people in Kiel; camping without
+  artificial light shifts the clock ~2 hours; genes are only ~50 percent). Jule used to
+  narrate it and then ask what had surprised the guest about research they had only heard
+  summarised. The asking task is placed *before* the surprise task for that reason. Which
+  of the three news items is fake stays withheld until the guest has guessed.
+- **esstyp** — Barbara's regimen: three years, 40 minutes a day, two kilos and better
+  sleep, and the once-a-month Sunday where she does not weigh. That last one is the point:
+  task 5 asks the learner to qualify her thesis, and until now there was no concrete
+  material to qualify it *with*.
+- **restaurant** — the menu, with prices to the cent, and that only the Gemüsepfanne is
+  vegetarian (the Maultaschen are not, which is a trap worth having).
+- **arzt** — diagnosis, prescription, dosage, sick note. A doctor who invents a different
+  dosage on the second telling teaches the patient not to listen.
+
+### The selftest had been failing since 41260d8, in four places
+
+The Fahrkarte commit reported one pre-existing failure. It was four, stacked: `41260d8`
+rewrote the phrases of all four Kursbuch challenges into B2.1 register and left every test
+sentence behind. Only the first assertion could fail out loud, so the other three were
+invisible until it was fixed. All four sets of sentences are rewritten as filled-in B2.1
+templates, and the coaching block now loops over `coaching.phrases` the way the others do,
+rather than asserting one phrase by name — the shape that let this rot in the first place.
+
+**`node app/scoring.selftest.mjs` passes for the first time since 20.09.** Also green:
+`app/spoken.selftest.mjs`, `app/texts.selftest.mjs`, `npm run build`.
+
+**Measured:** asking beats being told 91 to 71 on all three transactional challenges.
+
+### Open
+
+The four Kursbuch challenges each gained a task, so every task is worth slightly less than
+before (coaching and minimalismus 4 points instead of 5, innereuhr and esstyp 3.33 instead
+of 4). The Kommunikation boxes are still individually graded, which is what matters, but
+the dilution is real and worth watching if those challenges start scoring high for the
+wrong reason.
+
+`restaurant` and `arzt` are still `locked: true`. They are fully built and tested, but
+nobody can play them until that flag comes off.
