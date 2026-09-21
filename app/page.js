@@ -1205,8 +1205,10 @@ export default function Home() {
                       <div className="row-sub">{s.desc}</div>
                     </div>
                     <div className="row-meta">
-                      {s.lektion && <span className="lektion">{s.lektion}</span>}
-                      <span className={`level level-${s.level[0]}`}>{s.level}</span>
+                      <span className="level-stack">
+                        <span className={`level level-${s.level[0]}`}>{s.level}</span>
+                        {s.lektion && <span className="lektion">{s.lektion}</span>}
+                      </span>
                       <span>{s.locked ? "Gesperrt" : s.category}</span>
                     </div>
                   </button>
