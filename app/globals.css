@@ -158,8 +158,8 @@ img.avatar { object-fit: cover; }
 .row-text { flex: 1; min-width: 0; }
 .row-title { font-weight: 700; font-size: 16px; }
 .row-sub { color: var(--muted); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.row-meta { color: var(--muted); font-size: 13px; font-weight: 600; display: flex; align-items: flex-start; gap: 10px; }
-.level-stack { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.row-meta { color: var(--muted); font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.row-cat { white-space: nowrap; }
 
 @media (max-width: 640px) {
   .hero { flex-direction: column; align-items: flex-start; }
