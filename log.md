@@ -1081,3 +1081,41 @@ coaching's phrases into B2.1 register and removed the einerseits/andererseits ph
 left the assertion that requires it. Left alone because fixing it means deciding what
 coaching's phrase contract should now be, which is content work on another challenge.
 Every Fahrkarte assertion runs before it and passes.
+
+---
+
+## 12.11.2026 - posthog-js 1.434.2 to 1.447.13
+
+Landed in the commit that adds this entry, branch
+`posthog-self-driving/choredeps-upgrade-posthog-js-from-14342-ab0558`.
+
+PostHog's SDK health check flagged the web SDK as outdated: every web event of the past
+week came from 1.434.2, the release that was current when analytics went in on 18.09.
+Nothing held the version back on purpose; `^1.434.2` already allowed the new release, only
+the lockfile pinned the old one.
+
+- `npm install posthog-js@^1.447.13`: the floor in `package.json` goes up, so a fresh
+  install cannot resolve back to the old release. The lockfile also moves
+  `@posthog/core` 1.55.0 to 1.67.1, `@posthog/types` 1.412.2 to 1.424.1 and
+  `@posthog/browser-common` 0.9.0 to 0.10.8. No other package changed.
+- The changelog from 1.434.2 to 1.447.13 has no major change and nothing that alters the
+  init options in `instrumentation-client.js`. Checked one by one:
+  - `defaults: "2026-08-30"` is still a valid date. Newer behaviour comes with new dates or
+    `defaults: "latest"`, so a pinned date keeps its behaviour.
+  - `mask_all_text`, `mask_all_element_attributes` and `autocapture.element_allowlist` are
+    still in the config type and still read by the autocapture code.
+  - "Synchronous replay fetch capture by default" (1.438.23) sits behind a preview flag
+    that this app does not set.
+  - The new warning for history pageviews without the history extension applies only to
+    the slim bundle. This app imports the full bundle.
+- Measured: `next build` passes, and the client chunk carries the string `1.447.13`.
+
+**Correction to section 6.** It says `instrumentation-client.js` keeps posthog-js out of
+the Worker bundle. That is true for the init, but `app/page.js` has imported posthog-js
+since `55a71c3` for `capture`, `identify` and `reset`, and the SDK appears in the SSR
+chunk of the page (`.next/server/chunks/ssr/`). This upgrade does not change that. Not
+measured: how much it adds to the Worker size.
+
+Open: the success check is in PostHog, not in code. After the deploy, `$lib_version` on new
+web events must read 1.447.x or later, and the SDK health issue must clear. With no new
+events there is no evidence either way.
